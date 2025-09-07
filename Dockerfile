@@ -1,10 +1,18 @@
-FROM python:3.14-rc-alpine3.20
+FROM python:3.11-slim
+
 WORKDIR /app
+
+# Dependencies install
 RUN apt-get update && \
     apt-get install -y ffmpeg jq python3-dev && \
     rm -rf /var/lib/apt/lists/*
+
+# Requirements install
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy project files
 COPY . .
-RUN python3 -m pip check yt-dlp
-CMD ["python3", "bot.py"]
+
+# Run bot
+CMD ["python", "bot.py"]
