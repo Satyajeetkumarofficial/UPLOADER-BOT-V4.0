@@ -1,19 +1,17 @@
-FROM python:3.12-slim
+FROM python:3.14-rc-alpine3.20
 
 WORKDIR /app
 
-# Install system dependencies (for ffmpeg, yt-dlp, pymongo, etc.)
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ffmpeg jq python3-dev gcc libffi-dev build-essential \
-    && rm -rf /var/lib/apt/lists/*
+# Install system dependencies using apk (Alpine package manager)
+RUN apk update && \
+    apk add --no-cache ffmpeg jq python3-dev gcc musl-dev libffi-dev
 
-# Copy and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy all project files
 COPY . .
 
-# Start the bot
+# Check yt-dlp dependency
+RUN python3 -m pip check yt-dlp || true
+
 CMD ["python3", "bot.py"]
