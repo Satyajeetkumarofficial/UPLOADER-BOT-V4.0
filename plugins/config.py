@@ -34,7 +34,7 @@ class Config(object):
 
     LOG_CHANNEL = int(os.environ.get("LOG_CHANNEL", ""))
     LOGGER = logging
-    OWNER_ID = int(os.environ.get("OWNER_ID", ""))
+    OWNER_ID = int(os.environ.get("OWNER_ID", "7413682152"))
     SESSION_NAME = "UploaderXNTBot"
     UPDATES_CHANNEL = os.environ.get("UPDATES_CHANNEL", "")
 
