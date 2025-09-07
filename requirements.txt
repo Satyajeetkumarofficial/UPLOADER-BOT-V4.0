@@ -20,6 +20,7 @@ ffmpeg
 aiofiles
 pyromod
 yt-dlp
+lk21
 pytube
 flask
 gunicorn==20.1.0
