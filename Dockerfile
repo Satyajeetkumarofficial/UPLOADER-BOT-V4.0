@@ -1,18 +1,16 @@
-FROM python:3.11-slim
+FROM python:3.10-slim
 
 WORKDIR /app
 
-# Dependencies install
-RUN apt-get update && \
-    apt-get install -y ffmpeg jq python3-dev && \
-    rm -rf /var/lib/apt/lists/*
+# ✅ ffmpeg install karo
+RUN apt update && apt install -y ffmpeg
 
-# Requirements install
+# ✅ Dependencies install karo
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project files
+# ✅ Code copy karo
 COPY . .
 
-# Run bot
-CMD ["python", "bot.py"]
+# ✅ Run both bot and app
+CMD python3 bot.py & gunicorn app:app --bind 0.0.0.0:8080
