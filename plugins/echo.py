@@ -35,6 +35,8 @@ cookies_file = 'cookies.txt'
 
 @Client.on_message(filters.private & filters.regex(pattern=".*http.*"))
 async def echo(bot, update):
+  user_id = message.from_user.id  # ✅ यहाँ user_id define करना जरूरी है
+
     # Step 1: Check banned users
     if await db.is_banned(user_id):
         await message.reply_text(
