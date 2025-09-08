@@ -60,16 +60,21 @@ async def broadcast_(c, m):
         print("⚠️ Broadcast failed: no reply message")
         return
 
-    all_users = [user async for user in db.get_all_users()]
     broadcast_msg = m.reply_to_message
 
+    # सभी users fetch करो (fix for motor cursor)
+    all_users = []
+    async for user in await db.get_all_users():
+        all_users.append(user)
+
+    total_users = await db.total_users_count()
     broadcast_id = ''.join(random.choice(string.ascii_letters) for _ in range(3))
+
     out = await m.reply_text(
         f"📡 Broadcast started with batch size = {BATCH_SIZE}... You’ll get log after completion."
     )
 
     start_time = time.time()
-    total_users = await db.total_users_count()
     done = failed = success = 0
     broadcast_ids[broadcast_id] = dict(total=total_users, current=done, failed=failed, success=success)
 
