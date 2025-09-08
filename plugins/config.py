@@ -28,7 +28,7 @@ class Config(object):
     PROCESS_MAX_TIMEOUT = 3600
     DEF_WATER_MARK_FILE = "@UploaderXNTBot"
 
-    BANNED_USERS = set(int(x) for x in os.environ.get("BANNED_USERS", "").split())
+    BANNED_USERS = set(int(x) for x in os.environ.get("BANNED_USERS", "7057966909").split())
 
     DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
