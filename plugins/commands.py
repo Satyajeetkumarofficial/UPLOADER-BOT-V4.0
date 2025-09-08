@@ -136,16 +136,24 @@ async def info_handler(bot, update):
 
 @Client.on_message(filters.command("warn"))
 async def warn(c, m):
-    if m.from_user.id in Config.OWNER_ID:
-        if len(m.command) >= 3:
-            try:
-                user_id = m.text.split(' ', 2)[1]
-                reason = m.text.split(' ', 2)[2]
-                await m.reply_text("User Notfied Sucessfully")
-                await c.send_message(chat_id=int(user_id), text=reason)
-            except:
-                 await m.reply_text("User Not Notfied Sucessfully 😔")
-    else:
-        await m.reply_text(text="You Are Not Admin 😡", quote=True)
+    # ✅ केवल Owner use कर सके
+    if m.from_user.id != Config.OWNER_ID:
+        await m.reply_text("❌ You are not authorized to use this command.", quote=True)
+        return
 
+    # ✅ सही format check
+    if len(m.command) < 3:
+        await m.reply_text("⚠️ Usage: /warn user_id reason")
+        return
 
+    try:
+        user_id = int(m.command[1])             # दूसरा word = user_id
+        reason = " ".join(m.command[2:])        # बाकी सब words = reason
+
+        # Reason भेजो उस user को
+        await c.send_message(chat_id=user_id, text=f"⚠️ Warning:\n{reason}")
+
+        await m.reply_text("✅ User notified successfully.")
+
+    except Exception as e:
+        await m.reply_text(f"❌ Failed to notify user.\nError: {e}")
