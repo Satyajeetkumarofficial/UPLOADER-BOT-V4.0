@@ -1,4 +1,4 @@
-# (c) @AbirHasan2005
+# plugins/database/database.py
 
 import datetime
 import motor.motor_asyncio
@@ -10,7 +10,9 @@ class Database:
         self._client = motor.motor_asyncio.AsyncIOMotorClient(uri)
         self.db = self._client[database_name]
         self.col = self.db.users
+        self.banned_col = self.db.banned_users  # banned users collection
 
+    # ---------------- Users -----------------
     def new_user(self, id):
         return dict(
             id=id,
@@ -71,5 +73,25 @@ class Database:
         user = await self.col.find_one({'id': int(id)})
         return user or None
 
+    # ---------------- Banned Users -----------------
+    async def add_banned_user(self, user_id: int):
+        await self.banned_col.update_one(
+            {"user_id": user_id},
+            {"$set": {"user_id": user_id}},
+            upsert=True
+        )
 
+    async def remove_banned_user(self, user_id: int):
+        await self.banned_col.delete_one({"user_id": user_id})
+
+    async def is_banned(self, user_id: int):
+        user = await self.banned_col.find_one({"user_id": user_id})
+        return bool(user)
+
+    async def get_all_banned_users(self):
+        users = await self.banned_col.find().to_list(length=1000)
+        return [user["user_id"] for user in users]
+
+
+# instance
 db = Database(Config.DATABASE_URL, "UploadLinkToFileBot")
