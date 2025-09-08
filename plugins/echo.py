@@ -29,6 +29,7 @@ from plugins.functions.ran_text import random_char
 from plugins.database.database import db
 from plugins.database.add import AddUser
 from pyrogram.types import Thumbnail
+from plugins.database.mongo_db import ban_user, unban_user, is_banned
 cookies_file = 'cookies.txt'
 
 
@@ -36,12 +37,11 @@ cookies_file = 'cookies.txt'
 @Client.on_message(filters.private & filters.regex(pattern=".*http.*"))
 async def echo(bot, update):
     # Step 1: Check banned users
-    if update.from_user.id in Config.BANNED_USERS:
-        await update.reply_text(
-            text="🚫 आप इस बॉट का उपयोग नहीं कर सकते।",
-            disable_web_page_preview=True
-        )
-        return  # Stop further processing
+    if await is_banned(message.from_user.id):
+‎        await message.reply_text(
+‎            "🚫 आप इस बॉट का उपयोग नहीं कर सकते।"
+‎        )
+‎        return  # Stop further processing
 
     # Step 2: Verification check
     if update.from_user.id != Config.OWNER_ID:
