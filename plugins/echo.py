@@ -35,7 +35,14 @@ cookies_file = 'cookies.txt'
 
 @Client.on_message(filters.private & filters.regex(pattern=".*http.*"))
 async def echo(bot, update):
-    if update.from_user.id != Config.OWNER_ID:  
+    # Step 1: पहले banned users चेक करें
+    if update.from_user.id in Config.BANNED_USERS:
+        await update.reply_text(
+            text="🚫 आप इस बॉट का उपयोग नहीं कर सकते।",
+            disable_web_page_preview=True
+        )
+        return  # banned users के लिए आगे प्रोसेस रोक दें
+      if update.from_user.id != Config.OWNER_ID:  
         if not await check_verification(bot, update.from_user.id) and Config.TRUE_OR_FALSE:
             button = [[
                 InlineKeyboardButton("✓⃝ Vᴇʀɪꜰʏ ✓⃝", url=await get_token(bot, update.from_user.id, f"https://telegram.me/{Config.BOT_USERNAME}?start="))
