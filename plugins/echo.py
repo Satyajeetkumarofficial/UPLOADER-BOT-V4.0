@@ -36,6 +36,12 @@ cookies_file = 'cookies.txt'
 
 @Client.on_message(filters.private & filters.regex(pattern=".*http.*"))
 async def echo(bot, update):
+    # --- Ban check start ---
+    if await is_user_banned(update.from_user.id):
+        await update.reply_text("🚫 Sorry, you are banned from using this bot.")
+        return
+    # --- Ban check end ---
+
     if update.from_user.id != Config.OWNER_ID:  
         if not await check_verification(bot, update.from_user.id) and Config.TRUE_OR_FALSE:
             button = [[
