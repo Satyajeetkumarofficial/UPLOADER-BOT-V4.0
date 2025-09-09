@@ -34,21 +34,13 @@ cookies_file = 'cookies.txt'
 
 @Client.on_message(filters.private & filters.regex(pattern=".*http.*"))
 async def echo(bot, update):
-    user_id = update.from_user.id
-
-    # 🔒 Step 1: Check if banned
-    if await db.is_banned(user_id):
-        await update.reply_text(
-            "🚫 आप इस बॉट का उपयोग नहीं कर सकते।",
-            disable_web_page_preview=True
-        )
-        # Admin log
-        if Config.LOG_CHANNEL:
-            await bot.send_message(
-                Config.LOG_CHANNEL,
-                f"⚠️ Banned user tried to upload\nUser: {update.from_user.mention}\nID: {user_id}\nMessage: {update.text}"
-            )
-        return  # Stop all further processing
+  ‎# Step 1: Check banned users
+‎    if update.from_user.id in Config.BANNED_USERS:
+‎        await update.reply_text(
+‎            text="🚫 आप इस बॉट का उपयोग नहीं कर सकते।",
+‎            disable_web_page_preview=True
+‎        )
+‎        return  # Stop all further processing
 
     # ---------------- Step 2: Add User to Database ----------------
     # Non-banned user को database में add करना (अगर पहले से नहीं है)
