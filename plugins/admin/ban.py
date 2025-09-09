@@ -5,11 +5,6 @@ from pyrogram.types import Message
 from plugins.config import Config
 from plugins.database.database import db
 
-async def is_user_banned(user_id: int) -> bool:
-    """Check if user is banned"""
-    user = await db.ban.find_one({"user_id": user_id})
-    return bool(user)
-
 
 # 🔒 Ban Command
 @Client.on_message(filters.command("ban") & filters.user(Config.OWNER_ID))
@@ -18,15 +13,21 @@ async def ban_command(client: Client, message: Message):
         # ✅ /ban <user_id>
         try:
             user_id = int(message.command[1])
-            await db.add_banned_user(user_id)
-            await message.reply_text(f"🚫 User `{user_id}` को सफलतापूर्वक ban कर दिया गया।")
+            if await db.is_banned(user_id):
+                await message.reply_text(f"⚠️ User `{user_id}` पहले से banned है।")
+            else:
+                await db.add_banned_user(user_id)
+                await message.reply_text(f"🚫 User `{user_id}` को सफलतापूर्वक ban कर दिया गया।")
         except ValueError:
             await message.reply_text("❌ सही User ID दो। Example: `/ban 123456789`")
     elif message.reply_to_message:
         # ✅ /ban (reply to user)
         user_id = message.reply_to_message.from_user.id
-        await db.add_banned_user(user_id)
-        await message.reply_text(f"🚫 User `{user_id}` को सफलतापूर्वक ban कर दिया गया।")
+        if await db.is_banned(user_id):
+            await message.reply_text(f"⚠️ User `{user_id}` पहले से banned है।")
+        else:
+            await db.add_banned_user(user_id)
+            await message.reply_text(f"🚫 User `{user_id}` को सफलतापूर्वक ban कर दिया गया।")
     else:
         await message.reply_text("❌ Usage:\n`/ban <user_id>`\nया फिर किसी message को reply करो।")
 
@@ -38,15 +39,21 @@ async def unban_command(client: Client, message: Message):
         # ✅ /unban <user_id>
         try:
             user_id = int(message.command[1])
-            await db.remove_banned_user(user_id)
-            await message.reply_text(f"✅ User `{user_id}` को unban कर दिया गया।")
+            if await db.is_banned(user_id):
+                await db.remove_banned_user(user_id)
+                await message.reply_text(f"✅ User `{user_id}` को unban कर दिया गया।")
+            else:
+                await message.reply_text(f"ℹ️ User `{user_id}` banned नहीं है।")
         except ValueError:
             await message.reply_text("❌ सही User ID दो। Example: `/unban 123456789`")
     elif message.reply_to_message:
         # ✅ /unban (reply to user)
         user_id = message.reply_to_message.from_user.id
-        await db.remove_banned_user(user_id)
-        await message.reply_text(f"✅ User `{user_id}` को unban कर दिया गया।")
+        if await db.is_banned(user_id):
+            await db.remove_banned_user(user_id)
+            await message.reply_text(f"✅ User `{user_id}` को unban कर दिया गया।")
+        else:
+            await message.reply_text(f"ℹ️ User `{user_id}` banned नहीं है।")
     else:
         await message.reply_text("❌ Usage:\n`/unban <user_id>`\nया फिर किसी message को reply करो।")
 
