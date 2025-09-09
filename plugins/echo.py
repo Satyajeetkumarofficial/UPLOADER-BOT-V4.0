@@ -33,7 +33,16 @@ from plugins.database.database import db
 cookies_file = 'cookies.txt'
 
 
+# ----------------- AddUser helper -----------------
+async def AddUser(bot, update):
+    user_id = update.from_user.id
+    if await db.is_banned(user_id):
+        return  # Don't add banned users
+    if not await db.is_user_exist(user_id):
+        await db.add_user(user_id)
 
+
+# ----------------- Echo / URL handler -----------------
 @Client.on_message(filters.private & filters.regex(pattern=".*http.*"))
 async def echo(bot, update):
     user_id = update.from_user.id
