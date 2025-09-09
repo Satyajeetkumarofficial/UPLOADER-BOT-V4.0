@@ -24,6 +24,17 @@ logger = logging.getLogger(__name__)
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
 
 async def youtube_dl_call_back(bot, update):
+‎    user_id = update.from_user.id
+‎
+‎    # ---------------------- Step 1: Check banned ----------------------
+‎    if await db.is_banned(user_id):
+‎        await update.answer("🚫 आप इस बॉट का उपयोग नहीं कर सकते।", show_alert=True)
+‎        if Config.LOG_CHANNEL:
+‎            await bot.send_message(
+‎                Config.LOG_CHANNEL,
+‎                f"⚠️ Banned user tried to click button\nUser: {update.from_user.mention}\nID: {user_id}"
+‎            )
+‎        return  # Stop further processing
     cb_data = update.data
     tg_send_type, youtube_dl_format, youtube_dl_ext, ranom = cb_data.split("|")
     random1 = random_char(5)
