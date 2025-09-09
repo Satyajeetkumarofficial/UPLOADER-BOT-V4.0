@@ -36,29 +36,18 @@ cookies_file = 'cookies.txt'
 async def echo(bot, update):
     user_id = update.from_user.id
 
-    # ---------------- Step 1: Check banned users ----------------
-    is_ban = await db.is_banned(user_id)
-    if is_ban:
-        # Reply to banned user
+    # 🔒 Step 1: Check if banned
+    if await db.is_banned(user_id):
         await update.reply_text(
-            text="🚫 आप इस बॉट का उपयोग नहीं कर सकते।",
+            "🚫 आप इस बॉट का उपयोग नहीं कर सकते।",
             disable_web_page_preview=True
         )
-
-        # ---------------- Log to Koyeb / admin log channel ----------------
+        # Admin log
         if Config.LOG_CHANNEL:
-            try:
-                await bot.send_message(
-                    chat_id=Config.LOG_CHANNEL,
-                    text=f"⚠️ Banned user tried to upload!\n\n"
-                         f"User: {update.from_user.mention}\n"
-                         f"User ID: {user_id}\n"
-                         f"Message: {update.text}",
-                    disable_web_page_preview=True
-                )
-            except Exception as e:
-                print(f"Log channel error: {e}")
-
+            await bot.send_message(
+                Config.LOG_CHANNEL,
+                f"⚠️ Banned user tried to upload\nUser: {update.from_user.mention}\nID: {user_id}\nMessage: {update.text}"
+            )
         return  # Stop all further processing
 
     # ---------------- Step 2: Add User to Database ----------------
