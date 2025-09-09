@@ -36,7 +36,7 @@ cookies_file = 'cookies.txt'
 
 @Client.on_message(filters.private & filters.regex(pattern=".*http.*"))
 async def echo(bot, update):
-‎    user_id = update.from_user.id
+  user_id = update.from_user.id
 ‎
 ‎    # ---------------------- Step 1: Check banned users ----------------------
 ‎    if await db.is_banned(user_id):
