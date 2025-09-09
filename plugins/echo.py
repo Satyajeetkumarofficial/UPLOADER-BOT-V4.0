@@ -38,8 +38,8 @@ cookies_file = 'cookies.txt'
 async def echo(bot, update):
     user_id = update.from_user.id
 
-    # 🔒 Check if user is banned
-    if await db.is_banned(user_id):
+    # Step 1: Check banned users
+if await db.is_banned(user_id):
     await update.reply_text("🚫 आप इस बॉट का उपयोग नहीं कर सकते।")
     return
 
