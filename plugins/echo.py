@@ -36,14 +36,17 @@ cookies_file = 'cookies.txt'
 
 @Client.on_message(filters.private & filters.regex(pattern=".*http.*"))
 async def echo(bot, update):
-    user_id = int(update.from_user.id)  # Ensure integer
-
-    # 🔒 BAN CHECK
-    if await db.is_banned(user_id):
-        await update.reply_text("🚫 You are banned from using this bot.")
-        return  # stop further processing
-
-    # 🛡 Verification check (non-owner users)
+‎    user_id = update.from_user.id
+‎
+‎    # ---------------------- Step 1: Check banned users ----------------------
+‎    if await db.is_banned(user_id):
+‎        await update.reply_text(
+‎            text="🚫 आप इस बॉट का उपयोग नहीं कर सकते।",
+‎            disable_web_page_preview=True
+‎        )
+‎        return  # Stop further processing
+‎
+‎    # 🛡 Verification check (non-owner users)
     if update.from_user.id != Config.OWNER_ID:  
         if not await check_verification(bot, update.from_user.id) and Config.TRUE_OR_FALSE:
             button = [[
