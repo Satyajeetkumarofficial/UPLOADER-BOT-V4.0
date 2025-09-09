@@ -301,8 +301,7 @@ async def youtube_dl_call_back(bot, update):
             duration=duration,
             length=width,
             thumb=thumbnail
-        )
-                )
+      )
             else:
                 logger.info("✅ " + custom_file_name)
             
