@@ -37,15 +37,20 @@ cookies_file = 'cookies.txt'
 async def echo(bot, update):
     user_id = update.from_user.id
 
-    # ---------------------- Step 1: Check banned users ----------------------
+    # ---------------- Step 1: Check Banned Users ----------------
+    # अगर user banned है तो message भेजकर return कर दो
     if await db.is_banned(user_id):
         await update.reply_text(
             text="🚫 आप इस बॉट का उपयोग नहीं कर सकते।",
             disable_web_page_preview=True
         )
-        return  # Stop further processing
+        return  # Stop all further processing
 
-    # 🛡 Verification check (non-owner users)
+    # ---------------- Step 2: Add User to Database ----------------
+    # Non-banned user को database में add करना (अगर पहले से नहीं है)
+    await AddUser(bot, update)
+
+    # ---------------- Step 3: Verification Check ----------------
     if update.from_user.id != Config.OWNER_ID:  
         if not await check_verification(bot, update.from_user.id) and Config.TRUE_OR_FALSE:
             button = [[
