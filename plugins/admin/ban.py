@@ -5,6 +5,11 @@ from pyrogram.types import Message
 from plugins.config import Config
 from plugins.database.database import db
 
+async def is_user_banned(user_id: int) -> bool:
+    """Check if user is banned"""
+    user = await db.ban.find_one({"user_id": user_id})
+    return bool(user)
+
 
 # 🔒 Ban Command
 @Client.on_message(filters.command("ban") & filters.user(Config.OWNER_ID))
