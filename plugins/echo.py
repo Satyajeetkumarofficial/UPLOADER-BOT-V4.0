@@ -40,8 +40,8 @@ async def echo(bot, update):
 
     # 🔒 Check if user is banned
     if await db.is_banned(user_id):
-        await update.reply_text("🚫 आप इस बॉट का उपयोग नहीं कर सकते।")
-        return
+    await update.reply_text("🚫 आप इस बॉट का उपयोग नहीं कर सकते।")
+    return
 
     # --- Ban check end ---
 
