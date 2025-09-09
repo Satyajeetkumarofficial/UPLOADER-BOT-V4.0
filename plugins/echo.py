@@ -29,7 +29,6 @@ from plugins.functions.ran_text import random_char
 from plugins.database.database import db
 from plugins.database.add import AddUser
 from pyrogram.types import Thumbnail
-from plugins.database.database import db
 cookies_file = 'cookies.txt'
 
 
