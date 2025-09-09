@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
 
 async def youtube_dl_call_back(bot, update):
-‎    user_id = update.from_user.id
+    user_id = update.from_user.id
 ‎
 ‎    # ---------------------- Step 1: Check banned ----------------------
 ‎    if await db.is_banned(user_id):
