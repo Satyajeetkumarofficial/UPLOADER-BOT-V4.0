@@ -249,6 +249,8 @@ async def youtube_dl_call_back(bot, update):
     if tg_send_type == "audio":
         duration = await Mdata03(download_directory)
         thumbnail = await Gthumb01(bot, update)
+
+        # User
         await update.message.reply_audio(
             audio=download_directory,
             caption=description,
@@ -262,6 +264,7 @@ async def youtube_dl_call_back(bot, update):
             )
         )
 
+        # Log Channel
         log_caption = f"📥 Uploaded by: {update.from_user.mention}\nFile Name: {custom_file_name}\nSize: {humanbytes(os.path.getsize(download_directory))}"
         await bot.send_audio(
             chat_id=Config.LOG_CHANNEL,
@@ -271,10 +274,12 @@ async def youtube_dl_call_back(bot, update):
             thumb=thumbnail
         )
 
-    # -------- Video Note / Voice Message Upload (User + Log Channel) --------
+    # -------- Video Note Upload (User + Log Channel) --------
     elif tg_send_type == "vm":
         width, duration = await Mdata02(download_directory)
         thumbnail = await Gthumb02(bot, update, duration, download_directory)
+
+        # User
         await update.message.reply_video_note(
             video_note=download_directory,
             duration=duration,
@@ -286,6 +291,17 @@ async def youtube_dl_call_back(bot, update):
                 update.message,
                 start_time
             )
+        )
+
+        # Log Channel
+        log_caption = f"📥 Uploaded by: {update.from_user.mention}\nFile Name: {custom_file_name}\nSize: {humanbytes(os.path.getsize(download_directory))}"
+        await bot.send_video_note(
+            chat_id=Config.LOG_CHANNEL,
+            video_note=download_directory,
+            duration=duration,
+            length=width,
+            thumb=thumbnail
+        )
         )
 
         log_caption = f"📥 Uploaded by: {update.from_user.mention}\nFile Name: {custom_file_name}\nSize: {humanbytes(os.path.getsize(download_directory))}"
