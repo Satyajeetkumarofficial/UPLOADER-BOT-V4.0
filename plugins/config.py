@@ -43,7 +43,7 @@ class Config(object):
     ADL_BOT_RQ = {}
 
     # Set False off else True
-    TRUE_OR_FALSE = os.environ.get("TRUE_OR_FALSE", "True").lower() == "true"
+    TRUE_OR_FALSE = os.environ.get("TRUE_OR_FALSE", "False").lower() == "true"
 
     # Shortlink settings
     SHORT_DOMAIN = environ.get("SHORT_DOMAIN", "shrinkme.top")
