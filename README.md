@@ -14,13 +14,12 @@
 
 ## 👤 Creator & Community  
 
-```
+
 - Creator / Developer : [Satyajeet Kumar](https://github.com/Satyajeetkumarofficial) | [Telegram](https://t.me/Satyajeetkumarofficial)  
 - Update Channel : [Pro Bot Update 🚀](https://t.me/ProBotUpdate)  
 - Support Group : [Pro Bots Discussions 💬](https://t.me/ProBotsDiscussionsGroup)  
 - Demo Bot : [Url Pro Uploader Bot](https://t.me/UrlProUploaderBot)  
 - GitHub Repo : [UPLOADER-BOT-V4.0](https://github.com/Satyajeetkumarofficial/UPLOADER-BOT-V4.0)  
-```
 
 ---
 
