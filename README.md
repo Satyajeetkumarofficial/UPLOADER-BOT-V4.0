@@ -1,6 +1,6 @@
-# URL Uᴘʟᴏᴀᴅᴇʀ ʙᴏᴛ V4 🚀
+# URL Uᴘʟᴏᴀᴅᴇʀ ʙᴏᴛ V4.0 🚀
 
-[![logo](https://graph.org/file/a7af2d3ece56bbb1297aa.jpg)](https://t.me/UrlProUploaderBot)
+[![logo](https://i.ibb.co/WN55wC04/IMG-20250910-144930-432.jpg)](https://t.me/UrlProUploaderBot)
 
 [![GitHub forks](https://img.shields.io/github/forks/Satyajeetkumarofficial/UPLOADER-BOT-V4.0?&style=flat-square&logo=github)](https://github.com/Satyajeetkumarofficial/UPLOADER-BOT-V4.0/fork)  
 ![Repo Size](https://img.shields.io/github/repo-size/Satyajeetkumarofficial/UPLOADER-BOT-V4.0?&style=flat-square&logo=github)  
