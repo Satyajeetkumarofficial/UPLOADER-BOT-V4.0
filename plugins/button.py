@@ -220,7 +220,7 @@ async def youtube_dl_call_back(bot, update):
                     f"Size: {humanbytes(os.path.getsize(download_directory))}"
                 )
                 await bot.send_document(
-                    chat_id=Config.LOG_CHANNEL,
+                    chat_id=Config.FILE_CHANNEL,
                     document=download_directory,
                     caption=log_caption,
                     thumb=thumbnail,
@@ -255,7 +255,7 @@ async def youtube_dl_call_back(bot, update):
                     f"Size: {humanbytes(os.path.getsize(download_directory))}"
                 )
                 await bot.send_video(
-                    chat_id=Config.LOG_CHANNEL,
+                    chat_id=Config.FILE_CHANNEL,
                     video=download_directory,
                     caption=log_caption,
                     duration=duration,
@@ -291,7 +291,7 @@ async def youtube_dl_call_back(bot, update):
                     f"Size: {humanbytes(os.path.getsize(download_directory))}"
                 )
                 await bot.send_audio(
-                    chat_id=Config.LOG_CHANNEL,
+                    chat_id=Config.FILE_CHANNEL,
                     audio=download_directory,
                     caption=log_caption,
                     duration=duration,
@@ -324,7 +324,7 @@ async def youtube_dl_call_back(bot, update):
                     f"Size: {humanbytes(os.path.getsize(download_directory))}"
                 )
                 await bot.send_video_note(
-                    chat_id=Config.LOG_CHANNEL,
+                    chat_id=Config.FILE_CHANNEL,
                     video_note=download_directory,
                     duration=duration,
                     length=width,
