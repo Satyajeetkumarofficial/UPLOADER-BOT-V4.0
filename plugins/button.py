@@ -177,7 +177,7 @@ async def youtube_dl_call_back(bot, update):
         if os.path.isfile(download_directory):
             file_size = os.stat(download_directory).st_size
         else:
-            download_directory = os.path.splitext(download_directory)[0] + "." + ".mkv"
+            download_directory = os.path.splitext(download_directory)[0] + ".mkv"
             if os.path.isfile(download_directory):
                 file_size = os.stat(download_directory).st_size
             else:
@@ -194,192 +194,189 @@ async def youtube_dl_call_back(bot, update):
                 )
             )
         else:
+            # ✅ Start Upload
             await update.message.edit_caption(
-    caption=Translation.UPLOAD_START.format(custom_file_name)
-)
-start_time = time.time()
+                caption=Translation.UPLOAD_START.format(custom_file_name)
+            )
+            start_time = time.time()
 
-# -------- Document Upload (User) --------
-if not await db.get_upload_as_doc(update.from_user.id):
-    thumbnail = await Gthumb01(bot, update)
-    await update.message.reply_document(
-        document=download_directory,
-        thumb=thumbnail,
-        caption=description,
-        progress=progress_for_pyrogram,
-        progress_args=(
-            Translation.UPLOAD_START,
-            update.message,
-            start_time,
-        ),
-    )
+            # -------- Document Upload (User) --------
+            if not await db.get_upload_as_doc(update.from_user.id):
+                thumbnail = await Gthumb01(bot, update)
+                await update.message.reply_document(
+                    document=download_directory,
+                    thumb=thumbnail,
+                    caption=description,
+                    progress=progress_for_pyrogram,
+                    progress_args=(
+                        Translation.UPLOAD_START,
+                        update.message,
+                        start_time,
+                    ),
+                )
 
-    # -------- Document Upload (Log Channel) --------
-    log_caption = (
-        f"📥 Uploaded by: {update.from_user.mention}\n"
-        f"File Name: {custom_file_name}\n"
-        f"Size: {humanbytes(os.path.getsize(download_directory))}"
-    )
-    await bot.send_document(
-        chat_id=Config.FILE_CHANNEL,
-        document=download_directory,
-        caption=log_caption,
-        thumb=thumbnail,
-    )
+                # -------- Document Upload (Log Channel) --------
+                log_caption = (
+                    f"📥 Uploaded by: {update.from_user.mention}\n"
+                    f"File Name: {custom_file_name}\n"
+                    f"Size: {humanbytes(os.path.getsize(download_directory))}"
+                )
+                await bot.send_document(
+                    chat_id=Config.FILE_CHANNEL,
+                    document=download_directory,
+                    caption=log_caption,
+                    thumb=thumbnail,
+                )
 
-    # -------- Update User Stats --------
-    try:
-        from plugins.database.user_stats_db import update_user_stats
-        file_size_gb = round(os.path.getsize(download_directory) / (1024**3), 2)
-        await update_user_stats(update.from_user.id, file_size_gb, file_size_gb, 1)
-    except Exception as e:
-        logger.error(f"[ERROR] Failed to update stats: {e}")
+                # -------- Update User Stats --------
+                try:
+                    file_size_gb = round(os.path.getsize(download_directory) / (1024**3), 2)
+                    await update_user_stats(update.from_user.id, file_size_gb, file_size_gb, 1)
+                except Exception as e:
+                    logger.error(f"[ERROR] Failed to update stats: {e}")
 
-else:
-    # -------- Video Upload (User) --------
-    width, height, duration = await Mdata01(download_directory)
-    thumb_image_path = await Gthumb02(
-        bot, update, duration, download_directory
-    )
-    await update.message.reply_video(
-        video=download_directory,
-        caption=description,
-        duration=duration,
-        width=width,
-        height=height,
-        supports_streaming=True,
-        thumb=thumb_image_path,
-        progress=progress_for_pyrogram,
-        progress_args=(
-            Translation.UPLOAD_START,
-            update.message,
-            start_time,
-        ),
-    )
+            else:
+                # -------- Video Upload (User) --------
+                width, height, duration = await Mdata01(download_directory)
+                thumb_image_path = await Gthumb02(
+                    bot, update, duration, download_directory
+                )
+                await update.message.reply_video(
+                    video=download_directory,
+                    caption=description,
+                    duration=duration,
+                    width=width,
+                    height=height,
+                    supports_streaming=True,
+                    thumb=thumb_image_path,
+                    progress=progress_for_pyrogram,
+                    progress_args=(
+                        Translation.UPLOAD_START,
+                        update.message,
+                        start_time,
+                    ),
+                )
 
-    # -------- Video Upload (Log Channel) --------
-    log_caption = (
-        f"📥 Uploaded by: {update.from_user.mention}\n"
-        f"File Name: {custom_file_name}\n"
-        f"Size: {humanbytes(os.path.getsize(download_directory))}"
-    )
-    await bot.send_video(
-        chat_id=Config.FILE_CHANNEL,
-        video=download_directory,
-        caption=log_caption,
-        duration=duration,
-        width=width,
-        height=height,
-        supports_streaming=True,
-        thumb=thumb_image_path,
-    )
+                # -------- Video Upload (Log Channel) --------
+                log_caption = (
+                    f"📥 Uploaded by: {update.from_user.mention}\n"
+                    f"File Name: {custom_file_name}\n"
+                    f"Size: {humanbytes(os.path.getsize(download_directory))}"
+                )
+                await bot.send_video(
+                    chat_id=Config.FILE_CHANNEL,
+                    video=download_directory,
+                    caption=log_caption,
+                    duration=duration,
+                    width=width,
+                    height=height,
+                    supports_streaming=True,
+                    thumb=thumb_image_path,
+                )
 
-    # -------- Update User Stats --------
-    try:
-        from plugins.database.user_stats_db import update_user_stats
-        file_size_gb = round(os.path.getsize(download_directory) / (1024**3), 2)
-        await update_user_stats(update.from_user.id, file_size_gb, file_size_gb, 1)
-    except Exception as e:
-        logger.error(f"[ERROR] Failed to update stats: {e}")
+                # -------- Update User Stats --------
+                try:
+                    file_size_gb = round(os.path.getsize(download_directory) / (1024**3), 2)
+                    await update_user_stats(update.from_user.id, file_size_gb, file_size_gb, 1)
+                except Exception as e:
+                    logger.error(f"[ERROR] Failed to update stats: {e}")
 
-# -------- Audio Upload (User + Log Channel) --------
-if tg_send_type == "audio":
-    duration = await Mdata03(download_directory)
-    thumbnail = await Gthumb01(bot, update)
+            # -------- Audio Upload (User + Log Channel) --------
+            if tg_send_type == "audio":
+                duration = await Mdata03(download_directory)
+                thumbnail = await Gthumb01(bot, update)
 
-    # User
-    await update.message.reply_audio(
-        audio=download_directory,
-        caption=description,
-        duration=duration,
-        thumb=thumbnail,
-        progress=progress_for_pyrogram,
-        progress_args=(
-            Translation.UPLOAD_START,
-            update.message,
-            start_time,
-        ),
-    )
+                # User
+                await update.message.reply_audio(
+                    audio=download_directory,
+                    caption=description,
+                    duration=duration,
+                    thumb=thumbnail,
+                    progress=progress_for_pyrogram,
+                    progress_args=(
+                        Translation.UPLOAD_START,
+                        update.message,
+                        start_time,
+                    ),
+                )
 
-    # Log Channel
-    log_caption = (
-        f"📥 Uploaded by: {update.from_user.mention}\n"
-        f"File Name: {custom_file_name}\n"
-        f"Size: {humanbytes(os.path.getsize(download_directory))}"
-    )
-    await bot.send_audio(
-        chat_id=Config.FILE_CHANNEL,
-        audio=download_directory,
-        caption=log_caption,
-        duration=duration,
-        thumb=thumbnail,
-    )
+                # Log Channel
+                log_caption = (
+                    f"📥 Uploaded by: {update.from_user.mention}\n"
+                    f"File Name: {custom_file_name}\n"
+                    f"Size: {humanbytes(os.path.getsize(download_directory))}"
+                )
+                await bot.send_audio(
+                    chat_id=Config.FILE_CHANNEL,
+                    audio=download_directory,
+                    caption=log_caption,
+                    duration=duration,
+                    thumb=thumbnail,
+                )
 
-    # -------- Update User Stats --------
-    try:
-        from plugins.database.user_stats_db import update_user_stats
-        file_size_gb = round(os.path.getsize(download_directory) / (1024**3), 2)
-        await update_user_stats(update.from_user.id, file_size_gb, file_size_gb, 1)
-    except Exception as e:
-        logger.error(f"[ERROR] Failed to update stats: {e}")
+                # -------- Update User Stats --------
+                try:
+                    file_size_gb = round(os.path.getsize(download_directory) / (1024**3), 2)
+                    await update_user_stats(update.from_user.id, file_size_gb, file_size_gb, 1)
+                except Exception as e:
+                    logger.error(f"[ERROR] Failed to update stats: {e}")
 
-# -------- Video Note Upload (User + Log Channel) --------
-elif tg_send_type == "vm":
-    width, duration = await Mdata02(download_directory)
-    thumbnail = await Gthumb02(bot, update, duration, download_directory)
+            # -------- Video Note Upload (User + Log Channel) --------
+            elif tg_send_type == "vm":
+                width, duration = await Mdata02(download_directory)
+                thumbnail = await Gthumb02(bot, update, duration, download_directory)
 
-    # User
-    await update.message.reply_video_note(
-        video_note=download_directory,
-        duration=duration,
-        length=width,
-        thumb=thumbnail,
-        progress=progress_for_pyrogram,
-        progress_args=(
-            Translation.UPLOAD_START,
-            update.message,
-            start_time,
-        ),
-    )
+                # User
+                await update.message.reply_video_note(
+                    video_note=download_directory,
+                    duration=duration,
+                    length=width,
+                    thumb=thumbnail,
+                    progress=progress_for_pyrogram,
+                    progress_args=(
+                        Translation.UPLOAD_START,
+                        update.message,
+                        start_time,
+                    ),
+                )
 
-    # Log Channel
-    log_caption = (
-        f"📥 Uploaded by: {update.from_user.mention}\n"
-        f"File Name: {custom_file_name}\n"
-        f"Size: {humanbytes(os.path.getsize(download_directory))}"
-    )
-    await bot.send_video_note(
-        chat_id=Config.FILE_CHANNEL,
-        video_note=download_directory,
-        duration=duration,
-        length=width,
-        thumb=thumbnail,
-    )
+                # Log Channel
+                log_caption = (
+                    f"📥 Uploaded by: {update.from_user.mention}\n"
+                    f"File Name: {custom_file_name}\n"
+                    f"Size: {humanbytes(os.path.getsize(download_directory))}"
+                )
+                await bot.send_video_note(
+                    chat_id=Config.FILE_CHANNEL,
+                    video_note=download_directory,
+                    duration=duration,
+                    length=width,
+                    thumb=thumbnail,
+                )
 
-    # -------- Update User Stats --------
-    try:
-        from plugins.database.user_stats_db import update_user_stats
-        file_size_gb = round(os.path.getsize(download_directory) / (1024**3), 2)
-        await update_user_stats(update.from_user.id, file_size_gb, file_size_gb, 1)
-    except Exception as e:
-        logger.error(f"[ERROR] Failed to update stats: {e}")
+                # -------- Update User Stats --------
+                try:
+                    file_size_gb = round(os.path.getsize(download_directory) / (1024**3), 2)
+                    await update_user_stats(update.from_user.id, file_size_gb, file_size_gb, 1)
+                except Exception as e:
+                    logger.error(f"[ERROR] Failed to update stats: {e}")
 
-else:
-    logger.info("✅ " + custom_file_name)
+            else:
+                logger.info("✅ " + custom_file_name)
 
-end_two = datetime.now()
-time_taken_for_upload = (end_two - end_one).seconds
-try:
-    shutil.rmtree(tmp_directory_for_each_user)
-    os.remove(thumbnail)
-except Exception as e:
-    logger.error(f"Error cleaning up: {e}")
+            end_two = datetime.now()
+            time_taken_for_upload = (end_two - end_one).seconds
+            try:
+                shutil.rmtree(tmp_directory_for_each_user)
+                os.remove(thumbnail)
+            except Exception as e:
+                logger.error(f"Error cleaning up: {e}")
 
-await update.message.edit_caption(
-    caption=Translation.AFTER_SUCCESSFUL_UPLOAD_MSG_WITH_TS.format(
-        time_taken_for_download, time_taken_for_upload
-    )
-)
+            await update.message.edit_caption(
+                caption=Translation.AFTER_SUCCESSFUL_UPLOAD_MSG_WITH_TS.format(
+                    time_taken_for_download, time_taken_for_upload
+                )
+            )
 
-logger.info(f"✅ Downloaded in: {time_taken_for_download} seconds")
-logger.info(f"✅ Uploaded in: {time_taken_for_upload} seconds")
+            logger.info(f"✅ Downloaded in: {time_taken_for_download} seconds")
+            logger.info(f"✅ Uploaded in: {time_taken_for_upload} seconds")
