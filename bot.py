@@ -4,6 +4,7 @@
 
 
 import os
+import plugins.admin.user_stats_cmd
 from plugins.config import Config
 from pyrogram import Client
 
