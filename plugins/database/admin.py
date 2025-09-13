@@ -12,7 +12,7 @@ async def sts(c, m):
     if m.from_user.id != Config.OWNER_ID:
         return 
     total_users = await db.total_users_count()
-    await m.reply_text(text=f"<b>Total users:</b> {total_users}", quote=True)
+    await m.reply_text(text=f"<b>Total users:</b {total_users}", quote=True)
 
 
 @Client.on_message(filters.command('status') & filters.user(Config.OWNER_ID))
@@ -29,8 +29,15 @@ async def status_handler(_, m: Message):
 
     # ---------------- MongoDB Storage Info ----------------
     db_stats = await db.db.command("dbstats")
-    mongo_data_size = humanbytes(db_stats.get("dataSize", 0))        # Actual data size
-    mongo_storage_size = humanbytes(db_stats.get("storageSize", 0))  # Allocated storage
+    mongo_used = db_stats.get("storageSize", 0)  # Used
+    mongo_max = db_stats.get("fsUsedSize", None) or (mongo_used * 5)  # Approx if fsUsedSize not available
+    mongo_free = mongo_max - mongo_used
+    try:
+        mongo_percent = (mongo_used / mongo_max) * 100
+    except ZeroDivisionError:
+        mongo_percent = 0.0
+
+    mongo_storage_str = f"{humanbytes(mongo_used)} / {humanbytes(mongo_free)} ({mongo_percent:.2f}%)"
 
     # ---------------- Build Message ----------------
     text = (
@@ -40,8 +47,7 @@ async def status_handler(_, m: Message):
         f"**CPU Usage:** {cpu_usage}% \n"
         f"**RAM Usage:** {ram_usage}%\n\n"
         f"**Total Users in DB:** `{total_users}`\n\n"
-        f"**MongoDB Storage:**\n"
-        f"💽 Data Size: {mongo_data_size} | Storage Allocated: {mongo_storage_size}"
+        f"**MongoDB Storage:** {mongo_storage_str}"
     )
 
     await m.reply_text(text, quote=True)
