@@ -1,15 +1,18 @@
 from plugins.database.database import db
 import datetime
 
-# 🗓 आज की तारीख (UTC me) return karega
+user_stats_col = db.user_stats
+
 def today_date():
     return datetime.datetime.utcnow().strftime("%Y-%m-%d")
 
-# 📊 User stats update / insert karega
-async def update_user_stats(user_id, uploaded_gb=0, downloaded_gb=0, success_count=0):
-    stats = await db.db["user_stats"].find_one({"user_id": user_id, "date": today_date()})
+async def update_user_stats(user_id, uploaded_bytes=0, downloaded_bytes=0, success_count=0):
+    uploaded_gb = uploaded_bytes / (1024**3)
+    downloaded_gb = downloaded_bytes / (1024**3)
+
+    stats = await user_stats_col.find_one({"user_id": user_id, "date": today_date()})
     if not stats:
-        await db.db["user_stats"].insert_one({
+        await user_stats_col.insert_one({
             "user_id": user_id,
             "uploaded_gb": uploaded_gb,
             "downloaded_gb": downloaded_gb,
@@ -17,7 +20,7 @@ async def update_user_stats(user_id, uploaded_gb=0, downloaded_gb=0, success_cou
             "date": today_date()
         })
     else:
-        await db.db["user_stats"].update_one(
+        await user_stats_col.update_one(
             {"user_id": user_id, "date": today_date()},
             {"$inc": {
                 "uploaded_gb": uploaded_gb,
@@ -26,10 +29,8 @@ async def update_user_stats(user_id, uploaded_gb=0, downloaded_gb=0, success_cou
             }}
         )
 
-# 🧾 Ek user ke stats laane ke liye
 async def get_user_stats(user_id):
-    return await db.db["user_stats"].find_one({"user_id": user_id, "date": today_date()})
+    return await user_stats_col.find_one({"user_id": user_id, "date": today_date()})
 
-# 📈 Aaj ke sabhi users ke stats laane ke liye
 async def get_all_stats():
-    return db.db["user_stats"].find({"date": today_date()})
+    return user_stats_col.find({"date": today_date()})
