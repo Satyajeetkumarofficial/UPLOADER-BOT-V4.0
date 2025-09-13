@@ -76,7 +76,7 @@ async def total_uses(client: Client, message: Message):
             files = u.get("success_count", 0)
             text += (
                 f"\n{i}. 👤 `{uid}`\n"
-                f"    ⬆️ {humanbytes(uploaded)} | ⬇️ {humanbytes(downloaded)}\n"
+                f"    Uploaded ⬆️ {humanbytes(uploaded)} | Downloaded ⬇️ {humanbytes(downloaded)}\n"
                 f"    📦 Total: `{humanbytes(total_user_bytes)}` | 🗂 Files: {files}\n"
             )
 
