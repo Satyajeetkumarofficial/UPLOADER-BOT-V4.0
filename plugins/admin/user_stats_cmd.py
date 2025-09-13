@@ -99,7 +99,7 @@ async def total_uses(client: Client, message: Message):
 async def check_user_cmd(client: Client, message: Message):
     parts = message.text.strip().split()
     if len(parts) != 2:
-        await message.reply_text("⚠️ Usage: `/checkuser <user_id>`")
+        await message.reply_text("⚠️ Usage: `/useruses <user_id>`")
         return
 
     try:
