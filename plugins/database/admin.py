@@ -27,9 +27,10 @@ async def status_handler(_, m: Message):
     disk_usage = psutil.disk_usage('/').percent
     total_users = await db.total_users_count()
 
-    # ---------------- Accurate MongoDB Storage ----------------
+    # ---------------- MongoDB Storage Info ----------------
     db_stats = await db.db.command("dbstats")
-    mongo_storage_used = humanbytes(db_stats.get("storageSize", 0))  # Only logical used storage
+    mongo_data_size = humanbytes(db_stats.get("dataSize", 0))        # Actual data size
+    mongo_storage_size = humanbytes(db_stats.get("storageSize", 0))  # Allocated storage
 
     # ---------------- Build Message ----------------
     text = (
@@ -40,7 +41,7 @@ async def status_handler(_, m: Message):
         f"**RAM Usage:** {ram_usage}%\n\n"
         f"**Total Users in DB:** `{total_users}`\n\n"
         f"**MongoDB Storage:**\n"
-        f"💽 Used Storage: {mongo_storage_used}"
+        f"💽 Data Size: {mongo_data_size} | Storage Allocated: {mongo_storage_size}"
     )
 
     await m.reply_text(text, quote=True)
