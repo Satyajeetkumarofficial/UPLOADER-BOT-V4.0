@@ -276,8 +276,8 @@ async def youtube_dl_call_back(bot, update):
 
                 # -------- Update User Stats --------
                 try:
-                    file_size_gb = round(os.path.getsize(download_directory) / (1024**3), 2)
-                    await update_user_stats(update.from_user.id, file_size_gb, file_size_gb, 1)
+                    file_size_bytes = os.path.getsize(download_directory)
+                    await update_user_stats(update.from_user.id, file_size_bytes, file_size_bytes, 1)
                 except Exception as e:
                     logger.error(f"[ERROR] Failed to update stats: {e}")
 
@@ -316,8 +316,8 @@ async def youtube_dl_call_back(bot, update):
 
                 # -------- Update User Stats --------
                 try:
-                    file_size_gb = round(os.path.getsize(download_directory) / (1024**3), 2)
-                    await update_user_stats(update.from_user.id, file_size_gb, file_size_gb, 1)
+                    file_size_bytes = os.path.getsize(download_directory)
+                    await update_user_stats(update.from_user.id, file_size_bytes, file_size_bytes, 1)
                 except Exception as e:
                     logger.error(f"[ERROR] Failed to update stats: {e}")
 
@@ -356,8 +356,8 @@ async def youtube_dl_call_back(bot, update):
 
                 # -------- Update User Stats --------
                 try:
-                    file_size_gb = round(os.path.getsize(download_directory) / (1024**3), 2)
-                    await update_user_stats(update.from_user.id, file_size_gb, file_size_gb, 1)
+                    file_size_bytes = os.path.getsize(download_directory)
+                    await update_user_stats(update.from_user.id, file_size_bytes, file_size_bytes, 1)
                 except Exception as e:
                     logger.error(f"[ERROR] Failed to update stats: {e}")
 
