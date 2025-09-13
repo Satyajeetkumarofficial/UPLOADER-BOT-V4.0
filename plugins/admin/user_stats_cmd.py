@@ -94,18 +94,29 @@ async def total_uses(client: Client, message: Message):
         await message.reply_text(text)
 
 
-# ----------------- /checkuser <user_id> -----------------
-@Client.on_message(filters.command("useruses") & filters.user(Config.OWNER_ID))
+# ----------------- /useruses <user_id> -----------------
+@Client.on_message(filters.command("useruses"))
 async def check_user_cmd(client: Client, message: Message):
+    # Check if user is owner/admin
+    if message.from_user.id != Config.OWNER_ID:
+        await message.reply_text("❌ This command is restricted to the bot admin.")
+        return
+
     parts = message.text.strip().split()
     if len(parts) != 2:
-        await message.reply_text("⚠️ Usage: `/useruses <user_id>`")
+        await message.reply_text(
+            "⚠️ **Command Usage:**\n"
+            "`/useruses <user_id>`\n\n"
+            "Example:\n"
+            "`/useruses 123456789`\n\n"
+            "_Use this command to fetch today's usage statistics of a specific user by their numeric Telegram ID._"
+        )
         return
 
     try:
         user_id = int(parts[1])
     except ValueError:
-        await message.reply_text("❌ Invalid user_id. Numeric ID required.")
+        await message.reply_text("❌ Invalid user_id. Please provide a numeric Telegram user ID.")
         return
 
     stats = await get_user_stats(user_id)
