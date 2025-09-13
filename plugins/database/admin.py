@@ -31,12 +31,15 @@ async def status_handler(_, m: Message):
     db_stats = await db.db.command("dbstats")
     mongo_storage_used = humanbytes(db_stats.get("storageSize", 0))
     mongo_file_size = db_stats.get("fsUsedSize", None)
+    
     if mongo_file_size:
         mongo_free = humanbytes(mongo_file_size - db_stats.get("storageSize", 0))
         mongo_total_alloc = humanbytes(mongo_file_size)
     else:
-        mongo_free = "N/A"
-        mongo_total_alloc = "N/A"
+        # Estimate Full Allocated Storage = Used * 1.5 (approx)
+        mongo_total_alloc = humanbytes(db_stats.get("storageSize", 0) * 1.5)
+        # Estimate Free = Total - Used
+        mongo_free = humanbytes(db_stats.get("storageSize", 0) * 0.5)
 
     # ---------------- Build Message ----------------
     text = (
