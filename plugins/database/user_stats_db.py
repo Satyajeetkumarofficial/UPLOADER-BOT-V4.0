@@ -1,8 +1,8 @@
 from plugins.database.database import db
 import datetime
 
-# yahan collection fix karo
-user_stats_col = db["user_stats"]
+# Asli MongoDB database access karo
+user_stats_col = db.db["user_stats"]
 
 def today_date():
     return datetime.datetime.utcnow().strftime("%Y-%m-%d")
