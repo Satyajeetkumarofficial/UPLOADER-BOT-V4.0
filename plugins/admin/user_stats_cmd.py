@@ -32,7 +32,7 @@ async def my_uses(client: Client, message: Message):
 
 
 # ----------------- /totaluses -----------------
-@Client.on_message(filters.command("totaluses") & filters.user(Config.ADMINS))
+@Client.on_message(filters.command("totaluses") & filters.user(Config.OWNER_ID))
 async def total_uses(client: Client, message: Message):
     cursor = await get_all_stats()
     stats_list = await cursor.to_list(length=None)
@@ -95,7 +95,7 @@ async def total_uses(client: Client, message: Message):
 
 
 # ----------------- /checkuser <user_id> -----------------
-@Client.on_message(filters.command("checkuser") & filters.user(Config.ADMINS))
+@Client.on_message(filters.command("checkuser") & filters.user(Config.OWNER_ID))
 async def check_user_cmd(client: Client, message: Message):
     parts = message.text.strip().split()
     if len(parts) != 2:
