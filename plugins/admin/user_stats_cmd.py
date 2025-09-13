@@ -95,7 +95,7 @@ async def total_uses(client: Client, message: Message):
 
 
 # ----------------- /checkuser <user_id> -----------------
-@Client.on_message(filters.command("checkuser") & filters.user(Config.OWNER_ID))
+@Client.on_message(filters.command("useruses") & filters.user(Config.OWNER_ID))
 async def check_user_cmd(client: Client, message: Message):
     parts = message.text.strip().split()
     if len(parts) != 2:
