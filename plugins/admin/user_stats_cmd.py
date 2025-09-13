@@ -32,23 +32,33 @@ async def my_uses(client: Client, message: Message):
 
 
 # ----------------- /totaluses -----------------
-@Client.on_message(filters.command("totaluses") & filters.user(Config.OWNER_ID))
-async def total_uses(client: Client, message: Message):
+@Client.on_message(filters.command("totaluses"))
+async def total_uses(client: Client, message):
+    # Admin-only restriction
+    if message.from_user.id != Config.OWNER_ID:
+        await message.reply_text(
+            "❌ This command is restricted to the bot admin."
+        )
+        return
+
+    # Fetch all user stats
     cursor = await get_all_stats()
     stats_list = await cursor.to_list(length=None)
 
     if not stats_list:
-        await message.reply_text("📊 Aaj ka koi stats record nahi mila.")
+        await message.reply_text(
+            "📊 No usage records found for today.\n"
+            "Users have not performed any actions yet."
+        )
         return
 
-    # totals
+    # Calculate totals
     total_uploaded_gb = sum(s.get("uploaded_gb", 0) for s in stats_list)
     total_downloaded_gb = sum(s.get("downloaded_gb", 0) for s in stats_list)
     total_files = sum(s.get("success_count", 0) for s in stats_list)
-
     total_bytes = int((total_uploaded_gb + total_downloaded_gb) * (1024**3))
 
-    # top 3 users by combined usage (uploaded + downloaded)
+    # Top 3 users by total usage
     sorted_users = sorted(
         stats_list,
         key=lambda x: (x.get("uploaded_gb", 0) + x.get("downloaded_gb", 0)),
@@ -56,36 +66,40 @@ async def total_uses(client: Client, message: Message):
     )
     top3 = sorted_users[:3]
 
+    # Build message text
     text = (
         f"📊 **All Users (Today) — Summary**\n\n"
-        f"📤 Total Uploaded: `{humanbytes(int(total_uploaded_gb * (1024**3)))}`\n"
-        f"📥 Total Downloaded: `{humanbytes(int(total_downloaded_gb * (1024**3)))}`\n"
-        f"📦 Total Combined: `{humanbytes(total_bytes)}`\n"
-        f"🗂 Total Files Uploaded: `{total_files}`\n\n"
-        f"🏆 **Top 3 Users (by total usage)**\n"
+        f"📤 **Total Uploaded:** `{humanbytes(int(total_uploaded_gb * (1024**3)))}`\n"
+        f"📥 **Total Downloaded:** `{humanbytes(int(total_downloaded_gb * (1024**3)))}`\n"
+        f"📦 **Total Combined:** `{humanbytes(total_bytes)}`\n"
+        f"🗂 **Total Files Uploaded:** `{total_files}`\n\n"
+        f"🏆 **Top 3 Users (by total usage)**"
     )
 
     if not top3:
-        text += "\n(Top users not available)"
+        text += "\n\n(Top users not available)"
     else:
         for i, u in enumerate(top3, start=1):
-            uid = u.get("user_id") or u.get("_id")  # DB may store as user_id or _id
+            uid = u.get("user_id") or u.get("_id")
             uploaded = int(u.get("uploaded_gb", 0) * (1024**3))
             downloaded = int(u.get("downloaded_gb", 0) * (1024**3))
             total_user_bytes = uploaded + downloaded
             files = u.get("success_count", 0)
+
             text += (
-                f"\n{i}. 👤 `{uid}`\n"
-                f"    Uploaded ⬆️ {humanbytes(uploaded)} | Downloaded ⬇️ {humanbytes(downloaded)}\n"
-                f"    📦 Total: `{humanbytes(total_user_bytes)}` | 🗂 Files: {files}\n"
+                f"\n\n{i}. 👤 **User ID:** `{uid}`\n"
+                f"    • **Uploaded:** {humanbytes(uploaded)} ⬆️\n"
+                f"    • **Downloaded:** {humanbytes(downloaded)} ⬇️\n"
+                f"    • **Total Usage:** {humanbytes(total_user_bytes)} 📦\n"
+                f"    • **Files Uploaded:** {files} 🗂"
             )
 
-    # If message too long, send as file
+    # Send as file if message too long
     if len(text) > 4000:
         fname = f"totaluses_{message.message_id}.txt"
         with open(fname, "w", encoding="utf-8") as f:
             f.write(text)
-        await message.reply_document(fname, caption="📊 All Users Today (summary)")
+        await message.reply_document(fname, caption="📊 All Users Today (Summary)")
         try:
             os.remove(fname)
         except:
