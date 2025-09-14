@@ -14,6 +14,7 @@ class Config(object):
     BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
     API_ID = int(os.environ.get("API_ID", ))
     API_HASH = os.environ.get("API_HASH", "")
+    TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "")
     
     DOWNLOAD_LOCATION = "./DOWNLOADS"
     MAX_FILE_SIZE = 2194304000
@@ -36,7 +37,6 @@ class Config(object):
     FILE_CHANNEL = int(os.environ.get("FILE_CHANNEL", ""))
     LOGGER = logging
     OWNER_ID = int(os.environ.get("OWNER_ID", "7413682152"))
-    TMDB_API_KEY = int(os.environ.get("TMDB_API_KEY", ""))
     SESSION_NAME = "UploaderXNTBot"
     UPDATES_CHANNEL = os.environ.get("UPDATES_CHANNEL", "")
 
