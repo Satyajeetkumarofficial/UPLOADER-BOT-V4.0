@@ -36,6 +36,7 @@ class Config(object):
     FILE_CHANNEL = int(os.environ.get("FILE_CHANNEL", ""))
     LOGGER = logging
     OWNER_ID = int(os.environ.get("OWNER_ID", "7413682152"))
+    TMDB_API_KEY = int(os.environ.get("TMDB_API_KEY", ""))
     SESSION_NAME = "UploaderXNTBot"
     UPDATES_CHANNEL = os.environ.get("UPDATES_CHANNEL", "")
 
