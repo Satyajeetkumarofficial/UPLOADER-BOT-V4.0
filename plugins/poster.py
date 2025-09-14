@@ -81,7 +81,7 @@ async def get_posters(client, message):
                     f"🎬 <b>Movie:</b> {movie_title} ({movie_year})\n\n"
                     f"• English Landscape:\n1. First image uploaded 👆"
                 ),
-                parse_mode="html"
+                parse_mode="HTML"   # 🔥 FIXED HERE
             )
         except Exception as e:
             logger.error(f"❌ Failed to send landscape: {e}")
@@ -98,7 +98,7 @@ async def get_posters(client, message):
         await message.reply_text(
             f"📌 More Posters for <b>{movie_title} ({movie_year})</b>",
             reply_markup=InlineKeyboardMarkup(buttons),
-            parse_mode="html"
+            parse_mode="HTML"   # 🔥 FIXED HERE
         )
     else:
         await message.reply_text("❌ Aur koi posters available nahi hai.")
