@@ -1,6 +1,11 @@
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from plugins.database.database import db
+import os
+
+
+DOWNLOAD_DIR = "downloads"
+
 
 # Jab user video ya document bheje
 @Client.on_message(filters.private & (filters.video | filters.document))
@@ -24,6 +29,7 @@ async def ask_thumbnail_choice(client, message):
         reply_markup=keyboard
     )
 
+
 # Callback handler
 @Client.on_callback_query(filters.regex("^(use_thumb|new_thumb)"))
 async def handle_thumb_choice(client, callback: CallbackQuery):
@@ -35,24 +41,34 @@ async def handle_thumb_choice(client, callback: CallbackQuery):
     original_msg = await client.get_messages(callback.message.chat.id, msg_id)
 
     if choice == "use_thumb":
-        thumb = await db.get_thumbnail(user_id)
-        if not thumb:
+        thumb_id = await db.get_thumbnail(user_id)
+        if not thumb_id:
             await callback.answer("❌ You don't have any saved thumbnail.", show_alert=True)
             return
+
+        # Local thumbnail path
+        thumb_path = os.path.join(DOWNLOAD_DIR, f"{user_id}_thumb.jpg")
+
+        # Pehle purana file delete kar do (agar ho)
+        if os.path.exists(thumb_path):
+            os.remove(thumb_path)
+
+        # Thumbnail download karo (file_id → jpg)
+        await client.download_media(thumb_id, file_name=thumb_path)
 
         # File dobara bhejna with thumbnail
         if original_msg.video:
             await client.send_video(
                 chat_id=callback.message.chat.id,
                 video=original_msg.video.file_id,
-                thumb=thumb,
+                thumb=thumb_path,
                 caption=original_msg.caption or "🎥 Here is your file with saved thumbnail"
             )
         elif original_msg.document:
             await client.send_document(
                 chat_id=callback.message.chat.id,
                 document=original_msg.document.file_id,
-                thumb=thumb,
+                thumb=thumb_path,
                 caption=original_msg.caption or "📄 Here is your file with saved thumbnail"
             )
 
