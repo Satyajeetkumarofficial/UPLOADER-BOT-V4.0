@@ -12,12 +12,12 @@ async def my_uses(client: Client, message: Message):
     stats = await get_user_stats(user_id)
 
     if not stats:
-        await message.reply_text("📊 Aaj aapka koi record nahi mila. Pehle kuch upload ya download kijiye.")
+        await message.reply_text("📊 Aaj aapka koi record nahi mila. Pehle kuch upload ya download karein.")
         return
 
-    uploaded = int(stats.get("uploaded_gb", 0) * (1024**3))
-    downloaded = int(stats.get("downloaded_gb", 0) * (1024**3))
-    total = uploaded + downloaded
+    uploaded = stats.get("uploaded_bytes", 0)
+    downloaded = stats.get("downloaded_bytes", 0)
+    total_bytes = uploaded + downloaded
     total_files = stats.get("success_count", 0)
 
     text = (
@@ -25,7 +25,7 @@ async def my_uses(client: Client, message: Message):
         f"👤 User: {message.from_user.mention}\n"
         f"⬆️ Uploaded: `{humanbytes(uploaded)}`\n"
         f"⬇️ Downloaded: `{humanbytes(downloaded)}`\n"
-        f"📦 Total Usage: `{humanbytes(total)}`\n"
+        f"📦 Total Usage: `{humanbytes(total_bytes)}`\n"
         f"🗂 Files Uploaded: `{total_files}`"
     )
 
@@ -36,24 +36,24 @@ async def my_uses(client: Client, message: Message):
 @Client.on_message(filters.command("totaluses"))
 async def total_uses(client: Client, message: Message):
     if message.from_user.id != Config.OWNER_ID:
-        await message.reply_text("❌ This command is restricted to the bot admin.")
+        await message.reply_text("❌ Ye command sirf bot owner ke liye hai.")
         return
 
     cursor = await get_all_stats()
     stats_list = await cursor.to_list(length=None)
 
     if not stats_list:
-        await message.reply_text("📊 No usage records found for today.")
+        await message.reply_text("📊 Aaj ke liye koi usage record nahi mila.")
         return
 
-    total_uploaded = sum(int(s.get("uploaded_gb", 0) * (1024**3)) for s in stats_list)
-    total_downloaded = sum(int(s.get("downloaded_gb", 0) * (1024**3)) for s in stats_list)
+    total_uploaded = sum(s.get("uploaded_bytes", 0) for s in stats_list)
+    total_downloaded = sum(s.get("downloaded_bytes", 0) for s in stats_list)
     total_files = sum(s.get("success_count", 0) for s in stats_list)
     total_bytes = total_uploaded + total_downloaded
 
     sorted_users = sorted(
         stats_list,
-        key=lambda x: (x.get("uploaded_gb", 0) + x.get("downloaded_gb", 0)),
+        key=lambda x: (x.get("uploaded_bytes", 0) + x.get("downloaded_bytes", 0)),
         reverse=True
     )
     top3 = sorted_users[:3]
@@ -72,8 +72,8 @@ async def total_uses(client: Client, message: Message):
     else:
         for i, u in enumerate(top3, start=1):
             uid = u.get("user_id") or u.get("_id")
-            uploaded = int(u.get("uploaded_gb", 0) * (1024**3))
-            downloaded = int(u.get("downloaded_gb", 0) * (1024**3))
+            uploaded = u.get("uploaded_bytes", 0)
+            downloaded = u.get("downloaded_bytes", 0)
             total_user_bytes = uploaded + downloaded
             files = u.get("success_count", 0)
 
@@ -102,13 +102,13 @@ async def total_uses(client: Client, message: Message):
 @Client.on_message(filters.command("useruses"))
 async def check_user_cmd(client: Client, message: Message):
     if message.from_user.id != Config.OWNER_ID:
-        await message.reply_text("❌ This command is restricted to the bot admin.")
+        await message.reply_text("❌ Ye command sirf bot owner ke liye hai.")
         return
 
     parts = message.text.strip().split()
     if len(parts) != 2:
         await message.reply_text(
-            "⚠️ **Command Usage:**\n"
+            "⚠️ **Usage:**\n"
             "`/useruses <user_id>`\n\n"
             "Example:\n"
             "`/useruses 123456789`"
@@ -118,16 +118,16 @@ async def check_user_cmd(client: Client, message: Message):
     try:
         user_id = int(parts[1])
     except ValueError:
-        await message.reply_text("❌ Invalid user_id. Please provide a numeric Telegram user ID.")
+        await message.reply_text("❌ Invalid user_id. Sirf numeric Telegram ID dijiye.")
         return
 
     stats = await get_user_stats(user_id)
     if not stats:
-        await message.reply_text(f"❌ No stats found for user `{user_id}` today.")
+        await message.reply_text(f"❌ Aaj ke liye user `{user_id}` ka koi record nahi mila.")
         return
 
-    uploaded = int(stats.get("uploaded_gb", 0) * (1024**3))
-    downloaded = int(stats.get("downloaded_gb", 0) * (1024**3))
+    uploaded = stats.get("uploaded_bytes", 0)
+    downloaded = stats.get("downloaded_bytes", 0)
     total = uploaded + downloaded
     files = stats.get("success_count", 0)
 
