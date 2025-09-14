@@ -1,100 +1,104 @@
+# plugins/poster.py
+
+import logging
+import aiohttp
 from pyrogram import Client, filters
-from pyrogram.types import Message
-import requests
-from io import BytesIO
-from plugins.config import Config
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from plugins.config import Config   # TMDB_API_KEY, OWNER_ID
+
+logger = logging.getLogger(__name__)
+
+TMDB_BASE_URL = "https://api.themoviedb.org/3"
+IMAGE_BASE_URL = "https://image.tmdb.org/t/p/original"
 
 
-@Client.on_message(filters.command("posterinfo") & filters.user(Config.OWNER_ID))
-async def poster_info_command(bot: Client, message: Message):
+async def fetch_json(url, params=None):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, params=params) as resp:
+            if resp.status != 200:
+                logger.error(f"❌ Failed API call {url}, status {resp.status}")
+                return None
+            return await resp.json()
+
+
+@Client.on_message(filters.private & filters.command("poster"))
+async def get_posters(client, message):
     if len(message.command) < 2:
-        print("❌ Usage error: /posterinfo <movie name> [year]")
-        await message.reply_text("❌ Usage: /posterinfo <movie name> [year]")
+        await message.reply_text(
+            "⚡ Movie search karne ke liye:\n\n`/poster movie name [year]`",
+            quote=True
+        )
         return
 
-    # Movie name + optional year
-    if message.command[-1].isdigit() and len(message.command[-1]) == 4:
-        movie_year = message.command[-1]
-        movie_name = " ".join(message.command[1:-1])
-    else:
-        movie_year = None
-        movie_name = " ".join(message.command[1:])
+    query = " ".join(message.command[1:])
+    logger.info(f"🔎 Searching posters for: {query}")
 
-    print(f"🔎 Searching poster for: {movie_name}" + (f" ({movie_year})" if movie_year else ""))
+    # search movie
+    search_url = f"{TMDB_BASE_URL}/search/movie"
+    params = {"api_key": Config.TMDB_API_KEY, "query": query}
+    data = await fetch_json(search_url, params)
 
-    # TMDb Search API
-    search_url = f"https://api.themoviedb.org/3/search/movie?api_key={Config.TMDB_API_KEY}&query={movie_name}"
-    if movie_year:
-        search_url += f"&year={movie_year}"
-
-    try:
-        resp = requests.get(search_url, timeout=10).json()
-    except Exception as e:
-        print(f"❌ Error fetching data: {e}")
-        await message.reply_text(f"❌ Error fetching data: {e}")
+    if not data or not data.get("results"):
+        await message.reply_text("❌ Koi result nahi mila.")
         return
 
-    if not resp.get("results"):
-        print(f"❌ Movie '{movie_name}' not found.")
-        await message.reply_text(f"❌ Movie '{movie_name}' not found.")
-        return
-
-    movie = resp["results"][0]
-    title = movie.get("title", movie_name)
-    release_date = movie.get("release_date", "")
-    year = release_date.split("-")[0] if release_date else movie_year
-
-    # TMDb movie images API
+    movie = data["results"][0]
     movie_id = movie["id"]
-    images_url = f"https://api.themoviedb.org/3/movie/{movie_id}/images?api_key={Config.TMDB_API_KEY}"
-    try:
-        images_resp = requests.get(images_url, timeout=10).json()
-    except Exception as e:
-        print(f"❌ Error fetching images: {e}")
-        await message.reply_text(f"❌ Error fetching images: {e}")
+    movie_title = movie["title"]
+    movie_year = movie.get("release_date", "Unknown")[:4]
+
+    # fetch images
+    images_url = f"{TMDB_BASE_URL}/movie/{movie_id}/images"
+    images = await fetch_json(images_url, {"api_key": Config.TMDB_API_KEY})
+    if not images:
+        await message.reply_text("❌ Poster nahi mila.")
         return
 
-    backdrops = images_resp.get("backdrops", [])
-    posters = images_resp.get("posters", [])
+    posters = images.get("posters", [])
+    backdrops = images.get("backdrops", [])
 
-    if not backdrops and not posters:
-        print(f"❌ No images found for '{title}'")
-        await message.reply_text(f"❌ No images found for '{title}'")
-        return
+    # Landscape (>=1280 width) & Portrait (tall images)
+    landscape_links = [
+        IMAGE_BASE_URL + b["file_path"] for b in backdrops if b.get("width", 0) >= 1200
+    ][:10]
 
-    # First landscape for Telegram upload
-    first_landscape_url = f"https://image.tmdb.org/t/p/original{backdrops[0]['file_path']}" if backdrops else None
+    portrait_links = [
+        IMAGE_BASE_URL + p["file_path"] for p in posters if p.get("height", 0) > p.get("width", 0)
+    ][:10]
 
-    # Fetch photo bytes
-    photo_bytes = None
-    if first_landscape_url:
-        resp_img = requests.get(first_landscape_url, timeout=10)
-        if resp_img.status_code == 200:
-            photo_bytes = BytesIO(resp_img.content)
-            photo_bytes.name = "poster.jpg"
-            photo_bytes.seek(0)
+    logger.info(f"✅ Found {len(landscape_links)} landscapes & {len(portrait_links)} portraits")
 
-    # Prepare links caption
-    landscape_links = [f"https://image.tmdb.org/t/p/original{b['file_path']}" for b in backdrops[:5]]
-    poster_links = [f"https://image.tmdb.org/t/p/w500{p['file_path']}" for p in posters[:5]]
+    buttons = []
 
-    caption_text = f"🎬 Movie: <b>{title}</b> ({year})\n\n"
     if landscape_links:
-        caption_text += "• English Landscape:\n"
-        for i, link in enumerate(landscape_links, 1):
-            caption_text += f"{i}. <a href='{link}'>Click Here</a>\n"
-    if poster_links:
-        caption_text += "\n• Portrait Posters:\n"
-        for i, link in enumerate(poster_links, 1):
-            caption_text += f"{i}. <a href='{link}'>Click Here</a>\n"
+        # Upload first landscape
+        first_landscape = landscape_links[0]
+        try:
+            await client.send_photo(
+                chat_id=message.chat.id,
+                photo=first_landscape,
+                caption=(
+                    f"🎬 <b>Movie:</b> {movie_title} ({movie_year})\n\n"
+                    f"• English Landscape:\n1. First image uploaded 👆"
+                ),
+                parse_mode="html"
+            )
+        except Exception as e:
+            logger.error(f"❌ Failed to send landscape: {e}")
 
-    caption_text += "\nGenerated By : @UrlProUploaderBot"
+        # Remaining landscape buttons (2-10)
+        for i, link in enumerate(landscape_links[1:], start=2):
+            buttons.append([InlineKeyboardButton(f"Landscape {i}", url=link)])
 
-    # Send photo
-    if photo_bytes:
-        await message.reply_photo(photo=photo_bytes, caption=caption_text)
+    if portrait_links:
+        for i, link in enumerate(portrait_links, start=1):
+            buttons.append([InlineKeyboardButton(f"Poster {i}", url=link)])
+
+    if buttons:
+        await message.reply_text(
+            f"📌 More Posters for <b>{movie_title} ({movie_year})</b>",
+            reply_markup=InlineKeyboardMarkup(buttons),
+            parse_mode="html"
+        )
     else:
-        await message.reply_text(caption_text)
-
-    # Koyeb log
-    print(f"✅ Poster info sent for '{title}' ({year}) to user {message.from_user.id}")
+        await message.reply_text("❌ Aur koi posters available nahi hai.")
