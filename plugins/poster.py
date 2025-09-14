@@ -25,7 +25,7 @@ async def fetch_json(url, params=None):
 async def get_posters(client, message):
     if len(message.command) < 2:
         await message.reply_text(
-            "⚡ Movie search karne ke liye:\n\n`/poster movie name [year]`",
+            "⚡ Movie search karne ke liye:\n\n/poster movie name [year]",
             quote=True
         )
         return
@@ -78,10 +78,9 @@ async def get_posters(client, message):
                 chat_id=message.chat.id,
                 photo=first_landscape,
                 caption=(
-                    f"🎬 <b>Movie:</b> {movie_title} ({movie_year})\n\n"
+                    f"🎬 Movie: {movie_title} ({movie_year})\n\n"
                     f"• English Landscape:\n1. First image uploaded 👆"
-                ),
-                parse_mode="HTML"   # 🔥 FIXED HERE
+                )
             )
         except Exception as e:
             logger.error(f"❌ Failed to send landscape: {e}")
@@ -96,9 +95,8 @@ async def get_posters(client, message):
 
     if buttons:
         await message.reply_text(
-            f"📌 More Posters for <b>{movie_title} ({movie_year})</b>",
-            reply_markup=InlineKeyboardMarkup(buttons),
-            parse_mode="HTML"   # 🔥 FIXED HERE
+            f"📌 More Posters for {movie_title} ({movie_year})",
+            reply_markup=InlineKeyboardMarkup(buttons)
         )
     else:
         await message.reply_text("❌ Aur koi posters available nahi hai.")
