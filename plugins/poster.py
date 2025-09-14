@@ -1,12 +1,21 @@
+# plugins/poster.py
+
+import requests
+import logging
+from io import BytesIO
 from pyrogram import Client, filters
 from pyrogram.types import Message
-import requests
-from io import BytesIO
 from plugins.config import Config
+
+# Logger setup
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+TMDB_API_KEY = Config.TMDB_API_KEY
 
 
 @Client.on_message(filters.command("posterinfo") & filters.user(Config.OWNER_ID))
-async def poster_info_command(bot: Client, message: Message):
+async def get_posters(bot: Client, message: Message):
     if len(message.command) < 2:
         await message.reply_text("❌ Usage: /posterinfo <movie name> [year]")
         return
@@ -19,74 +28,96 @@ async def poster_info_command(bot: Client, message: Message):
         movie_year = None
         movie_name = " ".join(message.command[1:])
 
-    # Search movie
-    search_url = f"https://api.themoviedb.org/3/search/movie?api_key={Config.TMDB_API_KEY}&query={movie_name}"
+    logger.info(f"🔎 Searching posters for: {movie_name} ({movie_year or 'N/A'})")
+
+    # TMDb Search API
+    search_url = f"https://api.themoviedb.org/3/search/movie?api_key={TMDB_API_KEY}&query={movie_name}"
     if movie_year:
         search_url += f"&year={movie_year}"
 
-    resp = requests.get(search_url, timeout=10).json()
+    try:
+        resp = requests.get(search_url, timeout=10).json()
+    except Exception as e:
+        logger.error(f"❌ Error fetching TMDB search: {e}")
+        await message.reply_text(f"❌ Error fetching TMDB search: {e}")
+        return
+
     if not resp.get("results"):
-        await message.reply_text(f"❌ Movie '{movie_name}' not found.")
+        logger.error(f"❌ Movie not found: {movie_name}")
+        await message.reply_text(f"❌ Movie not found: {movie_name}")
         return
 
     movie = resp["results"][0]
     title = movie.get("title", movie_name)
     release_date = movie.get("release_date", "")
-    year = release_date.split("-")[0] if release_date else movie_year
+    year = release_date.split("-")[0] if release_date else movie_year or "N/A"
     movie_id = movie["id"]
 
-    # Get images (English filtered)
-    images_url = f"https://api.themoviedb.org/3/movie/{movie_id}/images?api_key={Config.TMDB_API_KEY}&include_image_language=en"
-    images_resp = requests.get(images_url, timeout=10).json()
+    # TMDb Images API (include English)
+    images_url = f"https://api.themoviedb.org/3/movie/{movie_id}/images?api_key={TMDB_API_KEY}&include_image_language=en,null"
+    try:
+        images_resp = requests.get(images_url, timeout=10).json()
+    except Exception as e:
+        logger.error(f"❌ Error fetching TMDB images: {e}")
+        await message.reply_text(f"❌ Error fetching TMDB images: {e}")
+        return
 
-    # Scene Clips (backdrops, upto 10)
-    scene_clips = images_resp.get("backdrops", [])[:10]
+    backdrops = images_resp.get("backdrops", [])
+    posters = images_resp.get("posters", [])
 
-    # English Landscape Posters (upto 5)
-    english_landscape = [
-        b for b in images_resp.get("backdrops", []) if b.get("iso_639_1") == "en"
-    ][:5]
+    # Filter: English Landscape (>=1280 width)
+    landscapes = [b for b in backdrops if b.get("width", 0) >= 1200 and b.get("iso_639_1") == "en"][:5]
+    # Portrait Posters (<=5)
+    portrait_posters = posters[:5]
+    # Scene Clips (other backdrops, up to 10)
+    scene_clips = [b for b in backdrops if b.get("iso_639_1") != "en"][:10]
 
-    # Portrait Posters (upto 5)
-    portrait_posters = [
-        p for p in images_resp.get("posters", []) if p.get("iso_639_1") == "en"
-    ][:5]
+    logger.info(f"✅ Found {len(landscapes)} landscapes, {len(portrait_posters)} posters, {len(scene_clips)} scenes")
 
-    # Upload first English Landscape Poster
+    # Upload first landscape if available
     photo_bytes = None
-    if english_landscape:
-        first_landscape_url = f"https://image.tmdb.org/t/p/original{english_landscape[0]['file_path']}"
-        img = requests.get(first_landscape_url, timeout=10)
-        if img.status_code == 200:
-            photo_bytes = BytesIO(img.content)
-            photo_bytes.name = "poster.jpg"
-            photo_bytes.seek(0)
+    if landscapes:
+        first_landscape_url = f"https://image.tmdb.org/t/p/original{landscapes[0]['file_path']}"
+        try:
+            resp_img = requests.get(first_landscape_url, timeout=10)
+            if resp_img.status_code == 200:
+                photo_bytes = BytesIO(resp_img.content)
+                photo_bytes.name = "poster.jpg"
+                photo_bytes.seek(0)
+        except Exception as e:
+            logger.error(f"❌ Error fetching first landscape: {e}")
 
-    # Prepare caption with Click Here links
+    # Build caption with text links
     caption_text = f"🎬 Movie: {title} ({year})\n\n"
 
-    if english_landscape:
+    if landscapes:
         caption_text += "• English Landscape Posters:\n"
-        for i, b in enumerate(english_landscape, 1):
+        for i, b in enumerate(landscapes, 1):
             link = f"https://image.tmdb.org/t/p/original{b['file_path']}"
-            caption_text += f"{i}. [Click Here]({link})\n"
+            caption_text += f"{i}. Click Here {link}\n"
 
     if portrait_posters:
         caption_text += "\n• Portrait Posters:\n"
         for i, p in enumerate(portrait_posters, 1):
             link = f"https://image.tmdb.org/t/p/w500{p['file_path']}"
-            caption_text += f"{i}. [Click Here]({link})\n"
+            caption_text += f"{i}. Click Here {link}\n"
 
     if scene_clips:
         caption_text += "\n• Scene Clips:\n"
-        for i, b in enumerate(scene_clips, 1):
-            link = f"https://image.tmdb.org/t/p/original{b['file_path']}"
-            caption_text += f"{i}. [Click Here]({link})\n"
+        for i, s in enumerate(scene_clips, 1):
+            link = f"https://image.tmdb.org/t/p/original{s['file_path']}"
+            caption_text += f"{i}. Click Here {link}\n"
 
     caption_text += "\nGenerated By : @UrlProUploaderBot"
 
-    # Send
-    if photo_bytes:
-        await message.reply_photo(photo=photo_bytes, caption=caption_text, parse_mode="Markdown")
-    else:
-        await message.reply_text(caption_text, parse_mode="Markdown")
+    # Send reply
+    try:
+        if photo_bytes:
+            await message.reply_photo(photo=photo_bytes, caption=caption_text)
+        else:
+            await message.reply_text(caption_text)
+    except Exception as e:
+        logger.error(f"❌ Failed to send reply: {e}")
+        await message.reply_text("❌ Failed to send poster info.")
+
+    logger.info(f"✅ Poster info sent for '{title}' ({year}) to user {message.from_user.id}")
