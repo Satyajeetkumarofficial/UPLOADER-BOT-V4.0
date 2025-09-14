@@ -217,15 +217,16 @@ async def youtube_dl_call_back(bot, update):
 
                 # -------- Document Upload (Log Channel) --------
                 log_caption = (
-                    f"📥 Uploaded by: {update.from_user.mention}\n"
-                    f"File Name: {custom_file_name}\n"
-                    f"Size: {humanbytes(os.path.getsize(download_directory))}"
-                )
-                await bot.send_document(
-                    chat_id=Config.FILE_CHANNEL,
-                    document=download_directory,
-                    caption=log_caption,
-                    thumb=thumbnail,
+‎    f"📥 Uploaded by: {update.from_user.mention}\n"
+‎    f"File Name: {custom_file_name}\n"
+‎    f"Size: {humanbytes(os.path.getsize(download_directory))}"
+‎)
+‎
+‎await bot.send_document(
+‎    chat_id=Config.FILE_CHANNEL,
+‎    document=download_directory,
+‎    caption=log_caption,
+‎    thumb=thumbnail,
                 )
 
                 # -------- Update User Stats --------
