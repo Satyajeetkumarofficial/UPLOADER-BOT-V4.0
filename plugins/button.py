@@ -194,28 +194,26 @@ async def youtube_dl_call_back(bot, update):
                 )
             )
         else:
-            # ✅ Start Upload
-            await update.message.edit_caption(
-                caption=Translation.UPLOAD_START.format(custom_file_name)
-            )
-            start_time = time.time()
+            # ---------- Start Upload ----------
+await update.message.edit_caption(
+    caption=Translation.UPLOAD_START.format(custom_file_name)
+)
+start_time = time.time()
 
-            # -------- Document Upload (User) --------
-            if not await db.get_upload_as_doc(update.from_user.id):
-                thumbnail = await Gthumb01(bot, update)
-                await update.message.reply_document(
-                    document=download_directory,
-                    thumb=thumbnail,
-                    caption=description,
-                    progress=progress_for_pyrogram,
-                    progress_args=(
-                        Translation.UPLOAD_START,
-                        update.message,
-                        start_time,
-                    ),
-                )
+# ---------- Thumbnail तैयार करें ----------
+thumbnail = await Gthumb01(bot, update)
 
-                # -------- Document Upload (Log Channel) --------
+try:
+    # ---------- यूज़र के लिए Document Upload ----------
+    await update.message.reply_document(
+        document=download_directory,
+        thumb=thumbnail,
+        caption=description,
+        progress=progress_for_pyrogram,
+        progress_args=(Translation.UPLOAD_START, update.message, start_time),
+    )
+
+    # ---------- लॉग चैनल के लिए Document Upload ----------
     log_caption = (
         f"📥 Uploaded by: {update.from_user.mention}\n"
         f"File Name: {custom_file_name}\n"
@@ -229,14 +227,27 @@ async def youtube_dl_call_back(bot, update):
         thumb=thumbnail,
     )
 
-    # -------- Update User Stats --------
-                try:
-                    file_size_bytes = os.path.getsize(download_directory)
-                    await update_user_stats(update.from_user.id, file_size_bytes, file_size_bytes, 1)
-                except Exception as e:
-                    logger.error(f"[ERROR] Failed to update stats: {e}")
+    # ---------- यूज़र स्टैट्स अपडेट ----------
+    file_size_bytes = os.path.getsize(download_directory)
+    await update_user_stats(update.from_user.id, file_size_bytes, file_size_bytes, 1)
 
-            else:
+finally:
+    # ---------- Cleanup: temporary files हटाएं ----------
+    try:
+        if os.path.exists(download_directory):
+            os.remove(download_directory)
+        if thumbnail and os.path.exists(thumbnail):
+            os.remove(thumbnail)
+        if os.path.exists(tmp_directory_for_each_user):
+            shutil.rmtree(tmp_directory_for_each_user)
+    except Exception as e:
+        logger.warning(f"Error cleaning up files: {e}")
+
+await update.message.edit_caption(
+    caption=Translation.AFTER_SUCCESSFUL_UPLOAD_MSG_WITH_TS.format(
+        time_taken_for_download, time_taken_for_upload
+    )
+)
                 # -------- Video Upload (User) --------
                 width, height, duration = await Mdata01(download_directory)
                 thumb_image_path = await Gthumb02(
@@ -381,3 +392,4 @@ async def youtube_dl_call_back(bot, update):
 
             logger.info(f"✅ Downloaded in: {time_taken_for_download} seconds")
             logger.info(f"✅ Uploaded in: {time_taken_for_upload} seconds")
+      
