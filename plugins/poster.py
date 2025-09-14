@@ -4,6 +4,7 @@ import requests
 from io import BytesIO
 from plugins.config import Config
 
+
 @Client.on_message(filters.command("posterinfo") & filters.user(Config.OWNER_ID))
 async def poster_info_command(bot: Client, message: Message):
     if len(message.command) < 2:
@@ -65,21 +66,17 @@ async def poster_info_command(bot: Client, message: Message):
     first_landscape_url = f"https://image.tmdb.org/t/p/original{backdrops[0]['file_path']}" if backdrops else None
 
     # Fetch photo bytes
+    photo_bytes = None
     if first_landscape_url:
         resp_img = requests.get(first_landscape_url, timeout=10)
         if resp_img.status_code == 200:
             photo_bytes = BytesIO(resp_img.content)
             photo_bytes.name = "poster.jpg"
             photo_bytes.seek(0)
-        else:
-            first_landscape_url = None
-            photo_bytes = None
-    else:
-        photo_bytes = None
 
     # Prepare links caption
-    landscape_links = [f"https://image.tmdb.org/t/p/original{b['file_path']}" for b in backdrops[:5]]  # first 5
-    poster_links = [f"https://image.tmdb.org/t/p/w500{p['file_path']}" for p in posters[:5]]  # first 5
+    landscape_links = [f"https://image.tmdb.org/t/p/original{b['file_path']}" for b in backdrops[:5]]
+    poster_links = [f"https://image.tmdb.org/t/p/w500{p['file_path']}" for p in posters[:5]]
 
     caption_text = f"🎬 Movie: <b>{title}</b> ({year})\n\n"
     if landscape_links:
@@ -95,9 +92,9 @@ async def poster_info_command(bot: Client, message: Message):
 
     # Send photo
     if photo_bytes:
-        await message.reply_photo(photo=photo_bytes, caption=caption_text, parse_mode="html")
+        await message.reply_photo(photo=photo_bytes, caption=caption_text)
     else:
-        await message.reply_text("❌ Failed to fetch first landscape photo.")
+        await message.reply_text(caption_text)
 
     # Koyeb log
     print(f"✅ Poster info sent for '{title}' ({year}) to user {message.from_user.id}")
