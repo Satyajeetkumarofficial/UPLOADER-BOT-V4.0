@@ -14,7 +14,7 @@ logger.setLevel(logging.INFO)
 TMDB_API_KEY = Config.TMDB_API_KEY
 
 
-@Client.on_message(filters.command("posterinfo") & filters.user(Config.OWNER_ID))
+@Client.on_message(filters.command("poster") & filters.user(Config.OWNER_ID))
 async def get_posters(bot: Client, message: Message):
     if len(message.command) < 2:
         await message.reply_text("❌ Usage: /posterinfo <movie name> [year]")
@@ -94,7 +94,7 @@ async def get_posters(bot: Client, message: Message):
     caption_text = f"🎬 Movie: <b>{title}</b> ({year})\n\n"
 
     if landscapes:
-        caption_text += "• English/Hindi Landscape Posters:\n"
+        caption_text += "• Landscape Posters:\n"
         for i, b in enumerate(landscapes, 1):
             link = f"https://image.tmdb.org/t/p/original{b['file_path']}"
             caption_text += f"{i}. <a href='{link}'>Click Here</a>\n"
