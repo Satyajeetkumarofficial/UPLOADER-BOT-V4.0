@@ -1,0 +1,80 @@
+from pyrogram import Client, filters
+from pyrogram.types import Message
+from plugins.config import Config
+import requests
+
+def tmdb_get(url):
+    try:
+        resp = requests.get(url, timeout=15)
+        resp.raise_for_status()
+        return resp.json()
+    except:
+        return None
+
+async def get_movie_by_name(movie_name):
+    url = f"https://api.themoviedb.org/3/search/movie?api_key={Config.TMDB_API_KEY}&query={movie_name}&language=en-US"
+    data = tmdb_get(url)
+    if not data or not data.get("results"):
+        return None
+    # First result
+    movie_id = data["results"][0]["id"]
+
+    # Get full details
+    url_detail = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={Config.TMDB_API_KEY}&language=en-US&append_to_response=credits"
+    details = tmdb_get(url_detail)
+    if not details:
+        return None
+
+    title = details.get("title", "Unknown")
+    runtime = details.get("runtime", "N/A")
+    release_date = details.get("release_date", "N/A")
+    languages = ", ".join([l["english_name"] for l in details.get("spoken_languages", [])]) or "Unknown"
+
+    director = "Unknown"
+    cast_list = []
+    for crew in details.get("credits", {}).get("crew", []):
+        if crew.get("job") == "Director":
+            director = crew.get("name")
+            break
+    for actor in details.get("credits", {}).get("cast", [])[:5]:
+        cast_list.append(actor.get("name"))
+    cast = ", ".join(cast_list) if cast_list else "Unknown"
+
+    overview = details.get("overview", "No description available.")
+
+    return {
+        "title": title,
+        "duration": runtime,
+        "release_date": release_date,
+        "languages": languages,
+        "director": director,
+        "cast": cast,
+        "overview": overview
+    }
+
+# Command to use in private chat
+@Client.on_message(filters.private & filters.user(Config.OWNER_ID) & filters.command("movieifo", prefixes="/"))
+async def add_movie(client: Client, message: Message):
+    if len(message.command) < 2:
+        await message.reply_text("❌ Please provide a movie name. Usage: /addmovie <movie_name>")
+        return
+
+    movie_name = " ".join(message.command[1:])
+    await message.reply_text(f"🔎 Searching TMDb for '{movie_name}'...")
+    movie = await get_movie_by_name(movie_name)
+    if not movie:
+        await message.reply_text("❌ Movie not found!")
+        return
+
+    # Movie details ready
+    text = (
+        f"🎬 Title: {movie['title']}\n"
+        f"⏱ Duration: {movie['duration']} minutes\n"
+        f"📅 Release Date: {movie['release_date']}\n"
+        f"🌐 Languages: {movie['languages']}\n"
+        f"🎬 Director: {movie['director']}\n"
+        f"⭐ Cast: {movie['cast']}\n"
+        f"📖 Overview:\n{movie['overview']}"
+    )
+
+    await message.reply_text(text)
