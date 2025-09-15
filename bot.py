@@ -8,7 +8,7 @@ from plugins.config import Config
 from pyrogram import Client
 from plugins.autopost import schedule_autopost   # ✅ autopost import
 
-# ✅ Logger setup
+# ✅ Logger setup (ye Koyeb logs me dikhega)
 logging.basicConfig(level=logging.INFO, format="%(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("bot")
 
@@ -28,14 +28,20 @@ if __name__ == "__main__":
         plugins=plugins
     )
 
-    # ✅ Start handler for scheduler
-    def start_handler(client):
-        schedule_autopost(client)
-        logger.info("✅ AutoPost Scheduler is running (6 AM UTC daily)")
-        print("🎊 I AM ALIVE 🎊  • Support @NT_BOTS_SUPPORT")
+    async def main():
+        # ✅ Start bot
+        await app.start()
+        logger.info("🎊 I AM ALIVE 🎊  • Support @NT_BOTS_SUPPORT")
 
-    # Pyrogram 2.x compatible on_start
-    app.on_start = start_handler
+        # ✅ Start autopost scheduler
+        try:
+            schedule_autopost(app)
+            logger.info("✅ AutoPost Scheduler is running (6 AM UTC daily)")
+        except Exception as e:
+            logger.error(f"❌ Failed to start scheduler: {e}")
 
-    # ✅ Run the bot (internally handles start + wait + stop)
-    app.run()
+        # ✅ Wait for updates (same as Client.run())
+        await app.idle()
+
+    import asyncio
+    asyncio.run(main())
