@@ -61,9 +61,9 @@ async def send_movie_post(app, movie, poster_url, tag):
 
     try:
         if poster_url:
-            await app.send_photo(FILE_CHANNEL, photo=poster_url, caption=caption, parse_mode="HTML")
+            await app.send_photo(FILE_CHANNEL, photo=poster_url, caption=caption, parse_mode="html")
         else:
-            await app.send_message(FILE_CHANNEL, caption, parse_mode="HTML")
+            await app.send_message(FILE_CHANNEL, caption, parse_mode="html")
 
         logger.info(f"✅ Posted: {title} ({tag})")
     except Exception as e:
