@@ -5,6 +5,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from plugins.config import Config
 from pyrogram import Client, filters
 from pyrogram.types import Message
+from pyrogram.enums import ParseMode
 
 logger = logging.getLogger("plugins.autopost")
 
@@ -61,9 +62,9 @@ async def send_movie_post(app, movie, poster_url, tag):
 
     try:
         if poster_url:
-            await app.send_photo(FILE_CHANNEL, photo=poster_url, caption=caption, parse_mode="html")
+            await app.send_photo(FILE_CHANNEL, photo=poster_url, caption=caption, parse_mode=ParseMode.HTML)
         else:
-            await app.send_message(FILE_CHANNEL, caption, parse_mode="html")
+            await app.send_message(FILE_CHANNEL, caption, parse_mode=ParseMode.HTML)
 
         logger.info(f"✅ Posted: {title} ({tag})")
     except Exception as e:
