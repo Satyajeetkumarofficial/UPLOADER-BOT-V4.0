@@ -12,7 +12,8 @@ from plugins.autopost import schedule_autopost   # ✅ autopost import
 logging.basicConfig(level=logging.INFO, format="%(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("bot")
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
+    # अगर डाउनलोड फोल्डर नहीं है तो बनाओ
     if not os.path.isdir(Config.DOWNLOAD_LOCATION):
         os.makedirs(Config.DOWNLOAD_LOCATION)
 
@@ -27,14 +28,14 @@ if __name__ == "__main__" :
         plugins=plugins
     )
 
-    async def main():
-        await app.start()  # बोट स्टार्ट करें
-        # ✅ Schedule autopost after bot starts
-        schedule_autopost(app)
+    # ✅ Start handler for scheduler
+    def start_handler(client):
+        schedule_autopost(client)
         logger.info("✅ AutoPost Scheduler is running (6 AM UTC daily)")
         print("🎊 I AM ALIVE 🎊  • Support @NT_BOTS_SUPPORT")
-        await app.idle()  # बोट को लगातार चलने दें
-        await app.stop()  # जब idle खत्म हो, बोट को बंद करें
 
-    import asyncio
-    asyncio.run(main())
+    # Pyrogram 2.x compatible on_start
+    app.on_start = start_handler
+
+    # ✅ Run the bot (internally handles start + wait + stop)
+    app.run()
