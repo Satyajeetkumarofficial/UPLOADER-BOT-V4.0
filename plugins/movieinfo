@@ -1,3 +1,4 @@
+import sys
 import requests
 from pyrogram import Client, filters
 from pyrogram.types import Message
@@ -7,7 +8,7 @@ from plugins.config import Config
 TMDB_API_KEY = Config.TMDB_API_KEY
 BASE_URL = "https://api.themoviedb.org/3"
 
-print("✅ movieinfo plugin loaded")  # startup log
+print("✅ movieinfo plugin imported", file=sys.stderr)  # plugin load confirm
 
 # ✅ Poster fetch helper
 def get_poster_url(movie_id):
@@ -36,10 +37,19 @@ def get_poster_url(movie_id):
             return f"https://image.tmdb.org/t/p/original{backdrops[0]['file_path']}"
 
         return None
-    except:
+    except Exception as e:
+        print(f"❌ get_poster_url error: {e}", file=sys.stderr)
         return None
 
 
+# ✅ Test command: /ping
+@Client.on_message(filters.command("ping"))
+async def ping_command(client: Client, message: Message):
+    await message.reply_text("pong ✅")
+    print("✅ /ping command triggered", file=sys.stderr)
+
+
+# ✅ Movie Info command
 @Client.on_message(filters.command("movieinfo"))
 async def movieinfo_command(client: Client, message: Message):
     if len(message.command) < 2:
@@ -54,7 +64,7 @@ async def movieinfo_command(client: Client, message: Message):
         year = None
         name = " ".join(message.command[1:])
 
-    print(f"🔎 Searching movieinfo for: {name} ({year})")
+    print(f"🔎 Searching movieinfo for: {name} ({year})", file=sys.stderr)
 
     # 🔎 Search movie on TMDb
     search_url = f"{BASE_URL}/search/movie?api_key={TMDB_API_KEY}&query={name}"
@@ -116,7 +126,7 @@ async def movieinfo_command(client: Client, message: Message):
         else:
             await message.reply_text(caption, parse_mode=ParseMode.HTML)
 
-        print(f"✅ Movieinfo sent for {title} ({year})")
+        print(f"✅ Movieinfo sent for {title} ({year})", file=sys.stderr)
     except Exception as e:
-        print(f"❌ Failed to send movieinfo: {e}")
+        print(f"❌ Failed to send movieinfo: {e}", file=sys.stderr)
         await message.reply_text(f"❌ Error: {e}")
