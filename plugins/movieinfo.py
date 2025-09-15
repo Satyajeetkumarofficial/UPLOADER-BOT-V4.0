@@ -6,16 +6,13 @@ from pyrogram.enums import ParseMode
 from plugins.config import Config
 
 TMDB_API_KEY = Config.TMDB_API_KEY
-OWNER_ID = int(Config.OWNER_ID)  # ensure integer
 BASE_URL = "https://api.themoviedb.org/3"
 
 print("✅ movieinfo plugin imported", file=sys.stderr)  # plugin load confirm
 
-
 # ✅ Poster fetch helper
-def get_poster_url(movie_id: int):
+def get_poster_url(movie_id):
     try:
-        print(f"🔎 Fetching poster for movie_id={movie_id}", file=sys.stderr)
         url = f"{BASE_URL}/movie/{movie_id}/images?api_key={TMDB_API_KEY}&include_image_language=hi,en,null"
         resp = requests.get(url, timeout=10).json()
         backdrops = resp.get("backdrops", [])
@@ -45,22 +42,18 @@ def get_poster_url(movie_id: int):
         return None
 
 
-# ✅ Test command: /ping (OWNER only)
-@Client.on_message(filters.command("ping") & filters.user(OWNER_ID))
+# ✅ Test command: /ping
+@Client.on_message(filters.command("ping"))
 async def ping_command(client: Client, message: Message):
-    print("✅ /ping command received", file=sys.stderr)
     await message.reply_text("pong ✅")
-    print("✅ /ping command replied", file=sys.stderr)
+    print("✅ /ping command triggered", file=sys.stderr)
 
 
-# ✅ Movie Info command (OWNER only)
-@Client.on_message(filters.command("movieinfo") & filters.user(OWNER_ID))
+# ✅ Movie Info command
+@Client.on_message(filters.command("movieinfo"))
 async def movieinfo_command(client: Client, message: Message):
-    print("✅ /movieinfo command triggered", file=sys.stderr)
-
     if len(message.command) < 2:
         await message.reply_text("❌ Usage: /movieinfo <movie name> [year]")
-        print("⚠️ Not enough arguments", file=sys.stderr)
         return
 
     # Movie name + optional year
@@ -78,23 +71,14 @@ async def movieinfo_command(client: Client, message: Message):
     if year:
         search_url += f"&year={year}"
 
-    try:
-        resp = requests.get(search_url, timeout=10).json()
-        results = resp.get("results", [])
-    except Exception as e:
-        await message.reply_text(f"❌ API error: {e}")
-        print(f"❌ API error: {e}", file=sys.stderr)
-        return
-
+    resp = requests.get(search_url, timeout=10).json()
+    results = resp.get("results", [])
     if not results:
         await message.reply_text(f"❌ No results found for {name} ({year or ''})")
-        print("⚠️ No results found", file=sys.stderr)
         return
 
     movie = results[0]
     movie_id = movie["id"]
-
-    print(f"✅ Found movie: {movie.get('title')} ({movie_id})", file=sys.stderr)
 
     # 🔹 Movie details
     details_url = f"{BASE_URL}/movie/{movie_id}?api_key={TMDB_API_KEY}&language=en-US"
