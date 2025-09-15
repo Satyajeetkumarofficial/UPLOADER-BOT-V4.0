@@ -10,7 +10,7 @@ BASE_URL = "https://api.themoviedb.org/3"
 
 print("✅ movieinfo plugin imported", file=sys.stderr)
 
-# 🌐 Language code map (common ones)
+# 🌐 Language code map (expanded)
 LANG_MAP = {
     "hi": "Hindi", "te": "Telugu", "ta": "Tamil", "ml": "Malayalam", "kn": "Kannada",
     "en": "English", "bn": "Bengali", "mr": "Marathi", "gu": "Gujarati",
@@ -48,7 +48,6 @@ async def movieinfo_command(client: Client, message: Message):
         await message.reply_text("❌ Usage: /movieinfo <movie name> [year]")
         return
 
-    # Movie name + optional year
     if message.command[-1].isdigit() and len(message.command[-1]) == 4:
         year = message.command[-1]
         name = " ".join(message.command[1:-1])
@@ -58,7 +57,7 @@ async def movieinfo_command(client: Client, message: Message):
 
     print(f"🔎 Searching movieinfo for: {name} ({year})", file=sys.stderr)
 
-    # 🔎 Search movie on TMDb
+    # 🔎 Search movie
     search_url = f"{BASE_URL}/search/movie?api_key={TMDB_API_KEY}&query={name}"
     if year:
         search_url += f"&year={year}"
@@ -72,11 +71,11 @@ async def movieinfo_command(client: Client, message: Message):
     movie = results[0]
     movie_id = movie["id"]
 
-    # 🔹 Movie details
+    # 🔹 Details
     details_url = f"{BASE_URL}/movie/{movie_id}?api_key={TMDB_API_KEY}&language=en-US"
     details = requests.get(details_url, timeout=10).json()
 
-    # 🔹 Credits (actors + director)
+    # 🔹 Credits
     credits_url = f"{BASE_URL}/movie/{movie_id}/credits?api_key={TMDB_API_KEY}&language=en-US"
     credits = requests.get(credits_url, timeout=10).json()
     cast = credits.get("cast", [])
@@ -93,20 +92,13 @@ async def movieinfo_command(client: Client, message: Message):
     genres = ", ".join([g["name"] for g in details.get("genres", [])]) or "N/A"
     runtime = details.get("runtime", "N/A")
 
-    # ✅ Real release languages
-    lang_url = f"{BASE_URL}/movie/{movie_id}/release_dates?api_key={TMDB_API_KEY}"
-    lang_resp = requests.get(lang_url, timeout=10).json()
-    results = lang_resp.get("results", [])
-    langs = set()
-    for r in results:
-        iso = r.get("iso_639_1")
-        if iso:
-            langs.add(LANG_MAP.get(iso, iso.upper()))
-    languages = ", ".join(sorted(langs)) if langs else "N/A"
+    # ✅ Languages (from spoken_languages)
+    spoken_langs = details.get("spoken_languages", [])
+    langs = [LANG_MAP.get(l["iso_639_1"], l["english_name"]) for l in spoken_langs]
+    languages = ", ".join(langs) if langs else "N/A"
 
     poster_url = get_poster_url(movie_id)
 
-    # 🔹 Caption with copyable values
     caption = (
         f"🎬 <b>{title}</b> ({year})\n\n"
         f"<b>🗓 Release Date:</b> <code>{release_date}</code>\n"
