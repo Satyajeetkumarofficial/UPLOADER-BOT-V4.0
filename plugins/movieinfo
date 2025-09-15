@@ -2,13 +2,17 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 from plugins.config import Config
 import requests
+import logging
+
+logger = logging.getLogger("plugins.poster")
 
 def tmdb_get(url):
     try:
         resp = requests.get(url, timeout=15)
         resp.raise_for_status()
         return resp.json()
-    except:
+    except Exception as e:
+        logger.error(f"❌ TMDb API error: {e}")
         return None
 
 async def get_movie_by_name(movie_name):
@@ -16,10 +20,8 @@ async def get_movie_by_name(movie_name):
     data = tmdb_get(url)
     if not data or not data.get("results"):
         return None
-    # First result
     movie_id = data["results"][0]["id"]
 
-    # Get full details
     url_detail = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={Config.TMDB_API_KEY}&language=en-US&append_to_response=credits"
     details = tmdb_get(url_detail)
     if not details:
@@ -41,6 +43,7 @@ async def get_movie_by_name(movie_name):
     cast = ", ".join(cast_list) if cast_list else "Unknown"
 
     overview = details.get("overview", "No description available.")
+    poster_url = f"https://image.tmdb.org/t/p/original{details.get('poster_path')}" if details.get('poster_path') else None
 
     return {
         "title": title,
@@ -49,32 +52,49 @@ async def get_movie_by_name(movie_name):
         "languages": languages,
         "director": director,
         "cast": cast,
-        "overview": overview
+        "overview": overview,
+        "poster_url": poster_url
     }
 
-# Command to use in private chat
-@Client.on_message(filters.private & filters.user(Config.OWNER_ID) & filters.command("movieifo", prefixes="/"))
-async def add_movie(client: Client, message: Message):
-    if len(message.command) < 2:
-        await message.reply_text("❌ Please provide a movie name. Usage: /addmovie <movie_name>")
+# ----------------------------
+# /movieinfo <movie_name>
+# Only OWNER_ID
+@Client.on_message(filters.command("movieinfo") & filters.user(Config.OWNER_ID))
+async def get_posters(bot: Client, message: Message):
+    if len(message.command) < 2:  # /poster MovieName
+        await message.reply_text("❌ Usage: /poster <movie_name>")
         return
 
     movie_name = " ".join(message.command[1:])
     await message.reply_text(f"🔎 Searching TMDb for '{movie_name}'...")
+
     movie = await get_movie_by_name(movie_name)
     if not movie:
         await message.reply_text("❌ Movie not found!")
         return
 
-    # Movie details ready
-    text = (
-        f"🎬 Title: {movie['title']}\n"
+    caption = (
+        f"🎬 <b>{movie['title']}</b>\n"
         f"⏱ Duration: {movie['duration']} minutes\n"
         f"📅 Release Date: {movie['release_date']}\n"
         f"🌐 Languages: {movie['languages']}\n"
         f"🎬 Director: {movie['director']}\n"
-        f"⭐ Cast: {movie['cast']}\n"
+        f"⭐ Cast: {movie['cast']}\n\n"
         f"📖 Overview:\n{movie['overview']}"
     )
 
-    await message.reply_text(text)
+    try:
+        if movie["poster_url"]:
+            await bot.send_photo(
+                chat_id=message.chat.id,
+                photo=movie["poster_url"],
+                caption=caption,
+                parse_mode="HTML"
+            )
+        else:
+            await bot.send_message(chat_id=message.chat.id, text=caption, parse_mode="HTML")
+
+        logger.info(f"🎬 Movie poster info sent: {movie['title']} to OWNER")
+    except Exception as e:
+        await message.reply_text(f"❌ Failed to send movie info: {e}")
+        logger.error(f"❌ Failed to send movie info: {e}")
