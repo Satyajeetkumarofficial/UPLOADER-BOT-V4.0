@@ -5,7 +5,6 @@ import os
 import logging
 import plugins.admin.user_stats_cmd
 from plugins.config import Config
-import plugins.movieinfo
 from pyrogram import Client
 from plugins.autopost import schedule_autopost   # ✅ autopost import
 
