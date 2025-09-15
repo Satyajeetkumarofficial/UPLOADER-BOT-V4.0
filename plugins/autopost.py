@@ -1,168 +1,141 @@
-import requests
 import logging
+import requests
 from datetime import datetime, timedelta
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from pyrogram import Client
 from plugins.config import Config
+from pyrogram import Client, filters
+from pyrogram.types import Message
 
 logger = logging.getLogger("plugins.autopost")
-logger.setLevel(logging.INFO)
 
-# ✅ Helper: TMDB fetch with error handling
-def tmdb_get(url):
+TMDB_API_KEY = Config.TMDB_API_KEY
+FILE_CHANNEL = Config.FILE_CHANNEL
+
+BASE_URL = "https://api.themoviedb.org/3"
+
+# ✅ Poster fetch helper
+def get_poster_url(movie_id):
     try:
-        resp = requests.get(url, timeout=15)
-        resp.raise_for_status()
-        return resp.json()
+        url = f"{BASE_URL}/movie/{movie_id}/images?api_key={TMDB_API_KEY}&include_image_language=hi,en,null"
+        resp = requests.get(url, timeout=10).json()
+        backdrops = resp.get("backdrops", [])
+        posters = resp.get("posters", [])
+
+        # Hindi backdrop first
+        for b in backdrops:
+            if b.get("iso_639_1") == "hi":
+                return f"https://image.tmdb.org/t/p/original{b['file_path']}"
+
+        # English backdrop
+        for b in backdrops:
+            if b.get("iso_639_1") == "en":
+                return f"https://image.tmdb.org/t/p/original{b['file_path']}"
+
+        # Any poster
+        if posters:
+            return f"https://image.tmdb.org/t/p/original{posters[0]['file_path']}"
+
+        # Any scene as fallback
+        if backdrops:
+            return f"https://image.tmdb.org/t/p/original{backdrops[0]['file_path']}"
+
+        return None
     except Exception as e:
-        logger.error(f"❌ TMDB API error: {e}")
+        logger.error(f"❌ Error fetching poster: {e}")
         return None
 
-# ✅ Prepare movie details
-def get_movie_details(movie_id):
-    url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={Config.TMDB_API_KEY}&language=en-US&append_to_response=credits"
-    data = tmdb_get(url)
-    if not data:
-        return None
-
-    title = data.get("title", "Unknown Title")
-    overview = data.get("overview", "No description available.")
-    release_date = data.get("release_date", "")
+# ✅ Send movie post
+async def send_movie_post(app, movie, poster_url, tag):
+    title = movie.get("title") or movie.get("name")
+    release_date = movie.get("release_date") or movie.get("first_air_date") or "N/A"
     year = release_date.split("-")[0] if release_date else "N/A"
+    overview = movie.get("overview", "No description available.")
 
-    genres = ", ".join([g["name"] for g in data.get("genres", [])]) or "Unknown"
-    languages = ", ".join([l["english_name"] for l in data.get("spoken_languages", [])]) or "Unknown"
-    director = "Unknown"
-    cast = []
-
-    for crew in data.get("credits", {}).get("crew", []):
-        if crew.get("job") == "Director":
-            director = crew.get("name")
-            break
-
-    for actor in data.get("credits", {}).get("cast", [])[:5]:
-        cast.append(actor.get("name"))
-
-    cast_str = ", ".join(cast) if cast else "Unknown"
-
-    return {
-        "title": title,
-        "overview": overview,
-        "release_date": release_date,
-        "year": year,
-        "genres": genres,
-        "languages": languages,
-        "director": director,
-        "cast": cast_str,
-    }
-
-# ✅ Get poster/landscape
-def get_movie_poster(movie_id):
-    url = f"https://api.themoviedb.org/3/movie/{movie_id}/images?api_key={Config.TMDB_API_KEY}"
-    data = tmdb_get(url)
-    if not data:
-        return None, []
-
-    backdrops_hi = [b for b in data.get("backdrops", []) if b.get("iso_639_1") == "hi"]
-    backdrops_en = [b for b in data.get("backdrops", []) if b.get("iso_639_1") == "en"]
-    posters = data.get("posters", [])
-    scenes = data.get("backdrops", [])
-
-    links = []
-
-    # Priority: Hindi → English → Posters → Scenes
-    if backdrops_hi:
-        poster_url = f"https://image.tmdb.org/t/p/original{backdrops_hi[0]['file_path']}"
-        links = [f"https://image.tmdb.org/t/p/original{b['file_path']}" for b in backdrops_hi[:10]]
-    elif backdrops_en:
-        poster_url = f"https://image.tmdb.org/t/p/original{backdrops_en[0]['file_path']}"
-        links = [f"https://image.tmdb.org/t/p/original{b['file_path']}" for b in backdrops_en[:10]]
-    elif posters:
-        poster_url = f"https://image.tmdb.org/t/p/original{posters[0]['file_path']}"
-        links = [f"https://image.tmdb.org/t/p/w500{p['file_path']}" for p in posters[:10]]
-    elif scenes:
-        poster_url = f"https://image.tmdb.org/t/p/original{scenes[0]['file_path']}"
-        links = [f"https://image.tmdb.org/t/p/original{s['file_path']}" for s in scenes[:10]]
-    else:
-        return None, []
-
-    return poster_url, links
-
-# ✅ Prepare message text
-def make_caption(details, links, tag):
     caption = (
-        f"🎬 <b>{details['title']}</b> ({details['year']})\n\n"
-        f"📅 Release Date: {details['release_date']}\n"
-        f"🎭 Genre: {details['genres']}\n"
-        f"🌐 Language: {details['languages']}\n"
-        f"🎬 Director: {details['director']}\n"
-        f"⭐ Cast: {details['cast']}\n\n"
-        f"📖 Overview:\n{details['overview']}\n\n"
+        f"🎬 <b>{title}</b> ({year})\n\n"
+        f"🗓 Release Date: {release_date}\n"
+        f"🏷 Status: {tag}\n\n"
+        f"📝 {overview}\n\n"
+        f"Generated By : @UrlProUploaderBot"
     )
 
-    if links:
-        caption += f"• Posters/Images ({tag}):\n"
-        for i, link in enumerate(links, 1):
-            caption += f"{i}. <a href='{link}'>Click Here</a>\n"
+    try:
+        if poster_url:
+            await app.send_photo(FILE_CHANNEL, photo=poster_url, caption=caption, parse_mode="HTML")
+        else:
+            await app.send_message(FILE_CHANNEL, caption, parse_mode="HTML")
 
-    caption += "\nGenerated By : @UrlProUploaderBot"
-    return caption
+        logger.info(f"✅ Posted: {title} ({tag})")
+    except Exception as e:
+        logger.error(f"❌ Failed to post {title}: {e}")
 
-# ✅ Post movies (1 week before, release day, first time seen)
-async def check_and_post(bot: Client):
-    logger.info("🔎 Checking upcoming movies...")
-
+# ✅ Main job: check upcoming movies
+async def check_movies(app):
     today = datetime.utcnow().date()
-    url = f"https://api.themoviedb.org/3/movie/upcoming?api_key={Config.TMDB_API_KEY}&language=en-US&page=1"
-    data = tmdb_get(url)
-    if not data:
+    one_week_later = today + timedelta(days=7)
+
+    url = f"{BASE_URL}/movie/upcoming?api_key={TMDB_API_KEY}&language=en-US&page=1&region=IN"
+    try:
+        resp = requests.get(url, timeout=10).json()
+        movies = resp.get("results", [])
+    except Exception as e:
+        logger.error(f"❌ Error fetching upcoming movies: {e}")
         return
 
-    for movie in data.get("results", []):
+    logger.info(f"🔎 Checking {len(movies)} upcoming movies...")
+
+    for movie in movies:
         release_date = movie.get("release_date")
         if not release_date:
             continue
 
         try:
-            rd = datetime.strptime(release_date, "%Y-%m-%d").date()
+            release = datetime.strptime(release_date, "%Y-%m-%d").date()
         except:
             continue
 
-        movie_id = movie["id"]
-        details = get_movie_details(movie_id)
-        if not details:
-            continue
+        poster_url = get_poster_url(movie["id"])
 
-        poster_url, links = get_movie_poster(movie_id)
-        if not poster_url:
-            logger.error(f"❌ No poster found for {details['title']}")
-            continue
+        # 1 week before release
+        if release == one_week_later:
+            await send_movie_post(app, movie, poster_url, "⏳ Releasing in 1 Week")
 
-        caption = ""
-        tag = ""
-        if rd == today:
-            tag = "🎉 Releasing Today!"
-        elif rd == today + timedelta(days=7):
-            tag = "⏳ Releasing in 1 Week!"
-        elif (today - rd).days == 0:
-            tag = "📢 New Upcoming Movie Added on TMDb"
+        # Release today
+        elif release == today:
+            await send_movie_post(app, movie, poster_url, "🎉 Releasing Today")
 
-        if tag:
-            caption = make_caption(details, links, tag)
-            try:
-                await bot.send_photo(
-                    chat_id=Config.FILE_CHANNEL,
-                    photo=poster_url,
-                    caption=caption,
-                    parse_mode="HTML"
-                )
-                logger.info(f"✅ Posted {details['title']} ({tag})")
-            except Exception as e:
-                logger.error(f"❌ Failed to send {details['title']}: {e}")
+        # First time discovery
+        elif release > today:
+            await send_movie_post(app, movie, poster_url, "📢 New Movie Added")
 
 # ✅ Scheduler setup
-def schedule_autopost(bot: Client):
+def schedule_autopost(app):
     scheduler = AsyncIOScheduler(timezone="UTC")
-    scheduler.add_job(check_and_post, "cron", hour=6, minute=0, args=[bot])  # Daily at 6 AM UTC
+    scheduler.add_job(check_movies, "cron", hour=6, args=[app])  # daily 6 AM UTC
     scheduler.start()
-    logger.info("✅ AutoPost Scheduler started (6 AM UTC)")
+    logger.info("✅ Scheduler started (runs daily at 6 AM UTC)")
+
+# ✅ Manual test command
+@Client.on_message(filters.command("autotest") & filters.user(Config.OWNER_ID))
+async def autotest_command(client: Client, message: Message):
+    await message.reply_text("🔎 Testing AutoPost now...")
+
+    try:
+        url = f"{BASE_URL}/movie/upcoming?api_key={TMDB_API_KEY}&language=en-US&page=1&region=IN"
+        resp = requests.get(url, timeout=10).json()
+        movies = resp.get("results", [])
+
+        if not movies:
+            await message.reply_text("❌ No upcoming movies found.")
+            return
+
+        movie = movies[0]  # sirf first movie test ke liye
+        poster_url = get_poster_url(movie["id"])
+
+        await send_movie_post(client, movie, poster_url, "📢 Test AutoPost")
+        await message.reply_text(f"✅ Test movie posted: {movie.get('title')}")
+
+        logger.info(f"✅ /autotest posted: {movie.get('title')}")
+    except Exception as e:
+        await message.reply_text(f"❌ Error: {e}")
+        logger.error(f"❌ /autotest failed: {e}")
