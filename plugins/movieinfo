@@ -1,100 +1,114 @@
+# plugins/movieinfo.py
+
+import requests
 from pyrogram import Client, filters
 from pyrogram.types import Message
+from pyrogram.enums import ParseMode
 from plugins.config import Config
-import requests
-import logging
 
-logger = logging.getLogger("plugins.poster")
+TMDB_API_KEY = Config.TMDB_API_KEY
+BASE_URL = "https://api.themoviedb.org/3"
 
-def tmdb_get(url):
+# ✅ Poster fetch helper
+def get_poster_url(movie_id):
     try:
-        resp = requests.get(url, timeout=15)
-        resp.raise_for_status()
-        return resp.json()
-    except Exception as e:
-        logger.error(f"❌ TMDb API error: {e}")
+        url = f"{BASE_URL}/movie/{movie_id}/images?api_key={TMDB_API_KEY}&include_image_language=hi,en,null"
+        resp = requests.get(url, timeout=10).json()
+        backdrops = resp.get("backdrops", [])
+        posters = resp.get("posters", [])
+
+        # Hindi backdrop first
+        for b in backdrops:
+            if b.get("iso_639_1") == "hi":
+                return f"https://image.tmdb.org/t/p/original{b['file_path']}"
+
+        # English backdrop
+        for b in backdrops:
+            if b.get("iso_639_1") == "en":
+                return f"https://image.tmdb.org/t/p/original{b['file_path']}"
+
+        # Any poster
+        if posters:
+            return f"https://image.tmdb.org/t/p/original{posters[0]['file_path']}"
+
+        # Any scene as fallback
+        if backdrops:
+            return f"https://image.tmdb.org/t/p/original{backdrops[0]['file_path']}"
+
+        return None
+    except:
         return None
 
-async def get_movie_by_name(movie_name):
-    url = f"https://api.themoviedb.org/3/search/movie?api_key={Config.TMDB_API_KEY}&query={movie_name}&language=en-US"
-    data = tmdb_get(url)
-    if not data or not data.get("results"):
-        return None
-    movie_id = data["results"][0]["id"]
 
-    url_detail = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={Config.TMDB_API_KEY}&language=en-US&append_to_response=credits"
-    details = tmdb_get(url_detail)
-    if not details:
-        return None
-
-    title = details.get("title", "Unknown")
-    runtime = details.get("runtime", "N/A")
-    release_date = details.get("release_date", "N/A")
-    languages = ", ".join([l["english_name"] for l in details.get("spoken_languages", [])]) or "Unknown"
-
-    director = "Unknown"
-    cast_list = []
-    for crew in details.get("credits", {}).get("crew", []):
-        if crew.get("job") == "Director":
-            director = crew.get("name")
-            break
-    for actor in details.get("credits", {}).get("cast", [])[:5]:
-        cast_list.append(actor.get("name"))
-    cast = ", ".join(cast_list) if cast_list else "Unknown"
-
-    overview = details.get("overview", "No description available.")
-    poster_url = f"https://image.tmdb.org/t/p/original{details.get('poster_path')}" if details.get('poster_path') else None
-
-    return {
-        "title": title,
-        "duration": runtime,
-        "release_date": release_date,
-        "languages": languages,
-        "director": director,
-        "cast": cast,
-        "overview": overview,
-        "poster_url": poster_url
-    }
-
-# ----------------------------
-# /movieinfo <movie_name>
-# Only OWNER_ID
 @Client.on_message(filters.command("movieinfo") & filters.user(Config.OWNER_ID))
-async def get_posters(bot: Client, message: Message):
-    if len(message.command) < 2:  # /poster MovieName
-        await message.reply_text("❌ Usage: /poster <movie_name>")
+async def movieinfo_command(client: Client, message: Message):
+    if len(message.command) < 2:
+        await message.reply_text("❌ Usage: /movieinfo <movie name> [year]")
         return
 
-    movie_name = " ".join(message.command[1:])
-    await message.reply_text(f"🔎 Searching TMDb for '{movie_name}'...")
+    # Movie name + optional year
+    if message.command[-1].isdigit() and len(message.command[-1]) == 4:
+        year = message.command[-1]
+        name = " ".join(message.command[1:-1])
+    else:
+        year = None
+        name = " ".join(message.command[1:])
 
-    movie = await get_movie_by_name(movie_name)
-    if not movie:
-        await message.reply_text("❌ Movie not found!")
+    # 🔎 Search movie on TMDb
+    search_url = f"{BASE_URL}/search/movie?api_key={TMDB_API_KEY}&query={name}"
+    if year:
+        search_url += f"&year={year}"
+
+    resp = requests.get(search_url, timeout=10).json()
+    results = resp.get("results", [])
+    if not results:
+        await message.reply_text(f"❌ No results found for {name} ({year or ''})")
         return
+
+    movie = results[0]
+    movie_id = movie["id"]
+
+    # 🔹 Movie details
+    details_url = f"{BASE_URL}/movie/{movie_id}?api_key={TMDB_API_KEY}&language=en-US"
+    details = requests.get(details_url, timeout=10).json()
+
+    # 🔹 Credits (actors + director)
+    credits_url = f"{BASE_URL}/movie/{movie_id}/credits?api_key={TMDB_API_KEY}&language=en-US"
+    credits = requests.get(credits_url, timeout=10).json()
+
+    cast = credits.get("cast", [])
+    crew = credits.get("crew", [])
+
+    # Top 5 actors
+    top_actors = ", ".join([actor["name"] for actor in cast[:5]]) or "N/A"
+
+    # Director(s)
+    directors = [member["name"] for member in crew if member.get("job") == "Director"]
+    director_names = ", ".join(directors) if directors else "N/A"
+
+    title = details.get("title")
+    release_date = details.get("release_date", "N/A")
+    year = release_date.split("-")[0] if release_date else "N/A"
+    overview = details.get("overview", "No description available.")
+    genres = ", ".join([g["name"] for g in details.get("genres", [])]) or "N/A"
+    language = details.get("original_language", "N/A").upper()
+    runtime = details.get("runtime", "N/A")
+
+    poster_url = get_poster_url(movie_id)
 
     caption = (
-        f"🎬 <b>{movie['title']}</b>\n"
-        f"⏱ Duration: {movie['duration']} minutes\n"
-        f"📅 Release Date: {movie['release_date']}\n"
-        f"🌐 Languages: {movie['languages']}\n"
-        f"🎬 Director: {movie['director']}\n"
-        f"⭐ Cast: {movie['cast']}\n\n"
-        f"📖 Overview:\n{movie['overview']}"
+        f"🎬 <b>{title}</b> ({year})\n\n"
+        f"🗓 Release Date: {release_date}\n"
+        f"⏱ Runtime: {runtime} min\n"
+        f"🌐 Language: {language}\n"
+        f"🎭 Genres: {genres}\n"
+        f"🎬 Director: {director_names}\n"
+        f"⭐ Cast: {top_actors}\n\n"
+        f"📝 {overview}\n\n"
+        f"Generated By : @UrlProUploaderBot"
     )
 
-    try:
-        if movie["poster_url"]:
-            await bot.send_photo(
-                chat_id=message.chat.id,
-                photo=movie["poster_url"],
-                caption=caption,
-                parse_mode="HTML"
-            )
-        else:
-            await bot.send_message(chat_id=message.chat.id, text=caption, parse_mode="HTML")
-
-        logger.info(f"🎬 Movie poster info sent: {movie['title']} to OWNER")
-    except Exception as e:
-        await message.reply_text(f"❌ Failed to send movie info: {e}")
-        logger.error(f"❌ Failed to send movie info: {e}")
+    if poster_url:
+        await message.reply_photo(poster_url, caption=caption, parse_mode=ParseMode.HTML)
+    else:
+        await message.reply_text(caption, parse_mode=ParseMode.HTML)
