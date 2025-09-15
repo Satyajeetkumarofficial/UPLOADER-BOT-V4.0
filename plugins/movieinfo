@@ -1,10 +1,13 @@
 # plugins/movieinfo.py
 
+import logging
 import requests
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
 from plugins.config import Config
+
+logger = logging.getLogger("plugins.movieinfo")
 
 TMDB_API_KEY = Config.TMDB_API_KEY
 BASE_URL = "https://api.themoviedb.org/3"
@@ -112,3 +115,8 @@ async def movieinfo_command(client: Client, message: Message):
         await message.reply_photo(poster_url, caption=caption, parse_mode=ParseMode.HTML)
     else:
         await message.reply_text(caption, parse_mode=ParseMode.HTML)
+
+    logger.info(f"✅ /movieinfo posted: {movie.get('title')}")
+    except Exception as e:
+        await message.reply_text(f"❌ Error: {e}")
+        logger.error(f"❌ /movieinfo failed: {e}")
