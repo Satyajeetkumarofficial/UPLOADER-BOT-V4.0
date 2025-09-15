@@ -52,8 +52,8 @@ async def get_posters(bot: Client, message: Message):
     year = release_date.split("-")[0] if release_date else movie_year or "N/A"
     movie_id = movie["id"]
 
-    # TMDb Images API (English + others)
-    images_url = f"https://api.themoviedb.org/3/movie/{movie_id}/images?api_key={TMDB_API_KEY}&include_image_language=en,null"
+    # TMDb Images API (English + Hindi + others)
+    images_url = f"https://api.themoviedb.org/3/movie/{movie_id}/images?api_key={TMDB_API_KEY}&include_image_language=en,hi,null"
     try:
         images_resp = requests.get(images_url, timeout=10).json()
     except Exception as e:
@@ -63,12 +63,17 @@ async def get_posters(bot: Client, message: Message):
     backdrops = images_resp.get("backdrops", [])
     posters = images_resp.get("posters", [])
 
-    # Filter: English Landscape (>=1280 width)
-    landscapes = [b for b in backdrops if b.get("width", 0) >= 1200 and b.get("iso_639_1") == "en"][:5]
-    # Portrait Posters
+    # English & Hindi landscapes combined
+    english_landscapes = [b for b in backdrops if b.get("width", 0) >= 1200 and b.get("iso_639_1") == "en"]
+    hindi_landscapes = [b for b in backdrops if b.get("width", 0) >= 1200 and b.get("iso_639_1") == "hi"]
+
+    landscapes = (english_landscapes + hindi_landscapes)[:5]
+
+    # Portrait Posters (<=5)
     portrait_posters = posters[:5]
+
     # Scene Clips (other backdrops)
-    scene_clips = [b for b in backdrops if b.get("iso_639_1") != "en"][:10]
+    scene_clips = [b for b in backdrops if b.get("iso_639_1") not in ["en", "hi"]] [:10]
 
     logger.info(f"✅ Found {len(landscapes)} landscapes, {len(portrait_posters)} posters, {len(scene_clips)} scenes")
 
@@ -89,7 +94,7 @@ async def get_posters(bot: Client, message: Message):
     caption_text = f"🎬 Movie: <b>{title}</b> ({year})\n\n"
 
     if landscapes:
-        caption_text += "• English Landscape Posters:\n"
+        caption_text += "• English/Hindi Landscape Posters:\n"
         for i, b in enumerate(landscapes, 1):
             link = f"https://image.tmdb.org/t/p/original{b['file_path']}"
             caption_text += f"{i}. <a href='{link}'>Click Here</a>\n"
