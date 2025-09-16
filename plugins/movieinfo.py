@@ -3,7 +3,10 @@ import requests
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
-from info import TMDB_API_KEY
+from plugins.config import Config
+
+TMDB_API_KEY = Config.TMDB_API_KEY
+OWNER_ID = int(Config.OWNER_ID)
 
 BASE_URL = "https://api.themoviedb.org/3"
 
