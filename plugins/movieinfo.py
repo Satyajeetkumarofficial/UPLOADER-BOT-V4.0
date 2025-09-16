@@ -119,6 +119,7 @@ async def movieinfo_command(client: Client, message: Message):
 
     caption = (
         f"🎬 <b>{title}</b> ({year})\n\n"
+        f"<b>📌 Title :</b> <code>{title}</code>\n"
         f"<b>🗓 Release Date:</b> <code>{release_date}</code>\n"
         f"<b>⏱ Runtime:</b> <code>{runtime} min</code>\n"
         f"<b>🌐 Languages:</b> <code>{languages}</code>\n"
