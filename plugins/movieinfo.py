@@ -62,8 +62,8 @@ def get_poster_url(movie_id):
         return None
 
 
-# ✅ Movie Info command
-@Client.on_message(filters.command("movieinfo"))
+# ✅ Movie Info command (Owner Only)
+@Client.on_message(filters.command("movieinfo") & filters.user(Config.OWNER_ID))
 async def movieinfo_command(client: Client, message: Message):
     if len(message.command) < 2:
         await message.reply_text("❌ Usage: /movieinfo <movie name> [year]")
