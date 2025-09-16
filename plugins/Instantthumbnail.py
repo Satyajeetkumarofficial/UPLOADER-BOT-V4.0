@@ -1,5 +1,3 @@
-# plugins/Instantthumbnail.py
-
 import os
 import asyncio
 import logging
@@ -8,15 +6,14 @@ from pyrogram.types import Message
 
 logger = logging.getLogger("plugins.Instantthumbnail")
 
-# Memory dict: user_id -> {"file_path": str, "task": asyncio.Task}
-USER_FILES = {}
+USER_FILES = {}  # user_id -> {"file_path": str, "task": asyncio.Task}
 
 
-# 📥 When user sends a video or document
-@Client.on_message(filters.private & (filters.video | filters.document))
+# 📥 Catch all file messages (video/document/animation)
+@Client.on_message(filters.private & (filters.video | filters.document | filters.animation))
 async def save_file(client: Client, message: Message):
     user_id = message.from_user.id
-    file = message.video or message.document
+    file = message.video or message.document or message.animation
 
     if not file:
         await message.reply_text("❌ Unsupported file type.")
@@ -30,14 +27,14 @@ async def save_file(client: Client, message: Message):
     if user_id in USER_FILES and "task" in USER_FILES[user_id]:
         USER_FILES[user_id]["task"].cancel()
 
-    # Create timeout task
+    # Timeout task
     task = asyncio.create_task(thumbnail_timeout(client, message.chat.id, user_id))
 
     USER_FILES[user_id] = {"file_path": file_path, "task": task}
     await message.reply_text("📥 File saved!\n\n📸 Now send me a thumbnail image within 30 seconds.")
 
 
-# 📸 When user sends a photo (thumbnail)
+# 📸 Save thumbnail
 @Client.on_message(filters.private & filters.photo)
 async def save_thumbnail(client: Client, message: Message):
     user_id = message.from_user.id
@@ -50,7 +47,6 @@ async def save_thumbnail(client: Client, message: Message):
     thumb_path = await client.download_media(message.photo.file_id, file_name=f"{user_id}_thumb.jpg")
     file_path = USER_FILES[user_id]["file_path"]
 
-    # Cancel timeout task
     if "task" in USER_FILES[user_id]:
         USER_FILES[user_id]["task"].cancel()
 
@@ -58,8 +54,7 @@ async def save_thumbnail(client: Client, message: Message):
     await message.reply_text("⏳ Applying new thumbnail... Please wait.")
 
     try:
-        await asyncio.sleep(5)  # 5 second delay
-
+        await asyncio.sleep(5)  # delay
         if file_path.endswith(".mp4"):
             await client.send_video(
                 chat_id=message.chat.id,
@@ -82,7 +77,6 @@ async def save_thumbnail(client: Client, message: Message):
         await message.reply_text(f"❌ Failed to apply thumbnail: {e}")
 
     finally:
-        # Cleanup
         try:
             os.remove(file_path)
             os.remove(thumb_path)
@@ -91,16 +85,15 @@ async def save_thumbnail(client: Client, message: Message):
         USER_FILES.pop(user_id, None)
 
 
-# ⏳ Timeout checker
+# ⏳ Timeout
 async def thumbnail_timeout(client: Client, chat_id: int, user_id: int):
     try:
         await asyncio.sleep(30)
         if user_id in USER_FILES:
             file_path = USER_FILES[user_id]["file_path"]
-            await client.send_message(chat_id, "⏳ Timeout! You didn’t send a thumbnail.\n❌ Please try again.")
+            await client.send_message(chat_id, "⏳ Timeout! No thumbnail received.\n❌ Please try again.")
             logger.warning(f"⌛ Timeout for {user_id}, file: {file_path}")
 
-            # Cleanup
             try:
                 os.remove(file_path)
             except:
