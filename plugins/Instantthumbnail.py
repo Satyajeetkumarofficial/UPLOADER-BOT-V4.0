@@ -1,75 +1,79 @@
+# plugins/Instantthumbnail.py
+
 import os
-import logging
 import asyncio
+import logging
 from pyrogram import Client, filters
 from pyrogram.types import Message
 
-# ✅ Logger setup
 logger = logging.getLogger("plugins.Instantthumbnail")
 
-# Temporary storage per user
-TEMP_VIDEOS = {}
+# Memory dict: user_id -> file path
+USER_FILES = {}
 
-# 📥 Step 1: User sends video/document
+# 📥 When user sends a video or document
 @Client.on_message(filters.private & (filters.video | filters.document))
-async def ask_for_thumbnail(client: Client, message: Message):
+async def save_file(client: Client, message: Message):
     user_id = message.from_user.id
-    TEMP_VIDEOS[user_id] = message
+    file = message.video or message.document
+
+    if not file:
+        await message.reply_text("❌ Unsupported file type.")
+        return
+
+    file_path = await client.download_media(file, file_name=f"{user_id}_file")
+    USER_FILES[user_id] = file_path
 
     logger.info(f"📥 Received file from user {user_id}, waiting for thumbnail...")
+    await message.reply_text("📥 File saved!\n\n📸 Now send me a thumbnail image within 30 seconds.")
 
-    await message.reply_text("📸 Please send a thumbnail photo for this file.")
 
-
-# 📸 Step 2: User sends thumbnail
+# 📸 When user sends a photo (thumbnail)
 @Client.on_message(filters.private & filters.photo)
-async def apply_thumbnail(client: Client, message: Message):
+async def save_thumbnail(client: Client, message: Message):
     user_id = message.from_user.id
-    if user_id not in TEMP_VIDEOS:
-        logger.warning(f"⚠️ Thumbnail received from {user_id} but no video/document pending.")
-        await message.reply_text("❌ First send a video/document, then send a thumbnail.")
+
+    if user_id not in USER_FILES:
+        await message.reply_text("❌ No file found. Please send a video/document first.")
+        logger.warning(f"⚠️ Thumbnail received from {user_id} but no file stored.")
         return
 
-    file_message = TEMP_VIDEOS.pop(user_id)
-    thumb_path = f"thumb_{user_id}.jpg"
+    thumb_path = await client.download_media(message.photo.file_id, file_name=f"{user_id}_thumb.jpg")
+    file_path = USER_FILES.pop(user_id, None)
 
-    # Download thumbnail
-    try:
-        await message.download(file_name=thumb_path)
-        logger.info(f"✅ Thumbnail downloaded for user {user_id}: {thumb_path}")
-    except Exception as e:
-        logger.error(f"❌ Failed to download thumbnail for {user_id}: {e}")
-        await message.reply_text("❌ Failed to download thumbnail.")
+    if not file_path:
+        await message.reply_text("❌ File not found in memory.")
         return
 
+    logger.info(f"📸 Thumbnail received from {user_id}: {thumb_path}")
+    await message.reply_text("⏳ Applying new thumbnail... Please wait.")
+
     try:
-        # ⏳ Small delay (simulate instant processing)
+        # 5 second delay
         await asyncio.sleep(5)
-        logger.info(f"⏳ Applying thumbnail after 5s delay for user {user_id}")
 
-        # Re-send video/document with thumbnail
-        if file_message.video:
+        # Send file back with thumbnail
+        if file_path.endswith(".mp4"):
             await client.send_video(
-                chat_id=user_id,
-                video=file_message.video.file_id,
+                chat_id=message.chat.id,
+                video=file_path,
                 thumb=thumb_path,
-                caption="✅ Here is your video with the new thumbnail!"
+                caption="✅ Here is your file with new thumbnail!"
             )
-        elif file_message.document:
+        else:
             await client.send_document(
-                chat_id=user_id,
-                document=file_message.document.file_id,
+                chat_id=message.chat.id,
+                document=file_path,
                 thumb=thumb_path,
-                caption="✅ Here is your document with the new thumbnail!"
+                caption="✅ Here is your file with new thumbnail!"
             )
 
-        logger.info(f"🎉 Thumbnail applied successfully for user {user_id}")
+        logger.info(f"✅ File sent with new thumbnail for user {user_id}")
+
+        # Cleanup
+        os.remove(file_path)
+        os.remove(thumb_path)
 
     except Exception as e:
-        logger.error(f"❌ Failed to send file with thumbnail for {user_id}: {e}")
-        await message.reply_text(f"❌ Error applying thumbnail: {e}")
-
-    finally:
-        if os.path.exists(thumb_path):
-            os.remove(thumb_path)
-            logger.info(f"🗑 Deleted temp thumbnail {thumb_path}")
+        logger.error(f"❌ Error applying thumbnail: {e}")
+        await message.reply_text(f"❌ Failed to apply thumbnail: {e}")
