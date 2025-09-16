@@ -9,15 +9,14 @@ BASE_URL = "https://api.themoviedb.org/3"
 
 print("✅ movieinfo plugin imported", file=sys.stderr)
 
-# 🌐 Language code map (expanded)
+# 🌐 Language map
 LANG_MAP = {
     "hi": "Hindi", "te": "Telugu", "ta": "Tamil", "ml": "Malayalam", "kn": "Kannada",
     "en": "English", "bn": "Bengali", "mr": "Marathi", "gu": "Gujarati",
     "pa": "Punjabi", "or": "Odia", "as": "Assamese", "ur": "Urdu"
 }
 
-
-# ✅ Poster fetch helper with filtering
+# ✅ Poster/backdrop fetch helper
 def get_poster_url(movie_id):
     try:
         url = f"{BASE_URL}/movie/{movie_id}/images?api_key={TMDB_API_KEY}&include_image_language=hi,en,null"
@@ -25,39 +24,36 @@ def get_poster_url(movie_id):
         backdrops = resp.get("backdrops", [])
         posters = resp.get("posters", [])
 
-        def filter_backdrops(backdrops, lang=None, region=None):
-            """
-            Sirf YouTube thumbnail type backdrops return karega
-            (16:9 ratio aur vote_count > 5)
-            """
-            results = []
-            for b in backdrops:
-                if lang and b.get("iso_639_1") != lang:
-                    continue
-                if region and b.get("iso_3166_1") != region:
-                    continue
-                ratio = b.get("aspect_ratio", 0)
-                votes = b.get("vote_count", 0)
-                if 1.70 <= ratio <= 1.85 and votes > 5:  # approx 16:9 aur popular
-                    results.append(b)
-            return results
+        # Hindi (priority)
+        for b in backdrops:
+            if b.get("iso_639_1") == "hi":
+                print("✅ Poster selected: Hindi backdrop", file=sys.stderr)
+                return f"https://media.themoviedb.org/t/p/w1000_and_h563_face{b['file_path']}"
 
-        # 🔎 Search priority
-        for lang, region in [("hi", None), ("hi", "IN"), ("en", None), (None, None)]:
-            filtered = filter_backdrops(backdrops, lang, region)
-            if filtered:
-                return f"https://image.tmdb.org/t/p/original{filtered[0]['file_path']}"
+        # Hindi + region IN
+        for b in backdrops:
+            if b.get("iso_639_1") == "hi" and b.get("iso_3166_1") == "IN":
+                print("✅ Poster selected: Hindi+IN backdrop", file=sys.stderr)
+                return f"https://media.themoviedb.org/t/p/w1000_and_h563_face{b['file_path']}"
 
-        # Fallback poster
+        # English fallback
+        for b in backdrops:
+            if b.get("iso_639_1") == "en":
+                print("✅ Poster selected: English backdrop", file=sys.stderr)
+                return f"https://media.themoviedb.org/t/p/w1000_and_h563_face{b['file_path']}"
+
+        # Poster fallback
         if posters:
+            print("✅ Poster selected: TMDB poster", file=sys.stderr)
             return f"https://image.tmdb.org/t/p/original{posters[0]['file_path']}"
 
-        # Last fallback: koi bhi backdrop
+        # Any scene fallback
         if backdrops:
-            return f"https://image.tmdb.org/t/p/original{backdrops[0]['file_path']}"
+            print("⚠️ Poster fallback: random backdrop", file=sys.stderr)
+            return f"https://media.themoviedb.org/t/p/w1000_and_h563_face{backdrops[0]['file_path']}"
 
+        print("❌ No poster/backdrop found", file=sys.stderr)
         return None
-
     except Exception as e:
         print(f"❌ get_poster_url error: {e}", file=sys.stderr)
         return None
@@ -67,7 +63,7 @@ def get_poster_url(movie_id):
 @Client.on_message(filters.command("movieinfo"))
 async def movieinfo_command(client: Client, message: Message):
     if len(message.command) < 2:
-        await message.reply_text("❌ Usage: /movieinfo movie name [year]")
+        await message.reply_text("❌ Usage: /movieinfo <movie name> [year]")
         return
 
     if message.command[-1].isdigit() and len(message.command[-1]) == 4:
