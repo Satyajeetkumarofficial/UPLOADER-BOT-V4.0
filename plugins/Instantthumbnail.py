@@ -1,55 +1,75 @@
+import os
+import logging
+import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import Message
-import os
 
-# Temporary save folder
-THUMB_DIR = "thumbnails"
-if not os.path.exists(THUMB_DIR):
-    os.makedirs(THUMB_DIR)
+# ✅ Logger setup
+logger = logging.getLogger("plugins.Instantthumbnail")
 
-# Store last video/document for each user
-user_last_file = {}
+# Temporary storage per user
+TEMP_VIDEOS = {}
 
-# Step 1: User sends video/document
+# 📥 Step 1: User sends video/document
 @Client.on_message(filters.private & (filters.video | filters.document))
-async def ask_thumbnail(client: Client, message: Message):
+async def ask_for_thumbnail(client: Client, message: Message):
     user_id = message.from_user.id
-    user_last_file[user_id] = message  # save file message
+    TEMP_VIDEOS[user_id] = message
+
+    logger.info(f"📥 Received file from user {user_id}, waiting for thumbnail...")
+
     await message.reply_text("📸 Please send a thumbnail photo for this file.")
 
 
-# Step 2: User sends thumbnail (photo)
+# 📸 Step 2: User sends thumbnail
 @Client.on_message(filters.private & filters.photo)
-async def set_thumbnail(client: Client, message: Message):
+async def apply_thumbnail(client: Client, message: Message):
     user_id = message.from_user.id
-
-    if user_id not in user_last_file:
-        await message.reply_text("⚠️ First send a video/document.")
+    if user_id not in TEMP_VIDEOS:
+        logger.warning(f"⚠️ Thumbnail received from {user_id} but no video/document pending.")
+        await message.reply_text("❌ First send a video/document, then send a thumbnail.")
         return
 
-    # Save thumbnail
-    thumb_path = os.path.join(THUMB_DIR, f"{user_id}.jpg")
-    await message.download(file_name=thumb_path)
+    file_message = TEMP_VIDEOS.pop(user_id)
+    thumb_path = f"thumb_{user_id}.jpg"
 
-    file_msg = user_last_file[user_id]
+    # Download thumbnail
+    try:
+        await message.download(file_name=thumb_path)
+        logger.info(f"✅ Thumbnail downloaded for user {user_id}: {thumb_path}")
+    except Exception as e:
+        logger.error(f"❌ Failed to download thumbnail for {user_id}: {e}")
+        await message.reply_text("❌ Failed to download thumbnail.")
+        return
 
-    # ✅ Re-send video/document with new thumbnail
-    if file_msg.video:
-        await client.send_video(
-            chat_id=user_id,
-            video=file_msg.video.file_id,
-            thumb=thumb_path,
-            caption=file_msg.caption or "🎬 Your file with custom thumbnail",
-        )
-    elif file_msg.document:
-        await client.send_document(
-            chat_id=user_id,
-            document=file_msg.document.file_id,
-            thumb=thumb_path,
-            caption=file_msg.caption or "📂 Your file with custom thumbnail",
-        )
+    try:
+        # ⏳ Small delay (simulate instant processing)
+        await asyncio.sleep(5)
+        logger.info(f"⏳ Applying thumbnail after 5s delay for user {user_id}")
 
-    await message.reply_text("✅ Thumbnail applied successfully!")
-    # Optionally delete saved thumb
-    os.remove(thumb_path)
-    del user_last_file[user_id]
+        # Re-send video/document with thumbnail
+        if file_message.video:
+            await client.send_video(
+                chat_id=user_id,
+                video=file_message.video.file_id,
+                thumb=thumb_path,
+                caption="✅ Here is your video with the new thumbnail!"
+            )
+        elif file_message.document:
+            await client.send_document(
+                chat_id=user_id,
+                document=file_message.document.file_id,
+                thumb=thumb_path,
+                caption="✅ Here is your document with the new thumbnail!"
+            )
+
+        logger.info(f"🎉 Thumbnail applied successfully for user {user_id}")
+
+    except Exception as e:
+        logger.error(f"❌ Failed to send file with thumbnail for {user_id}: {e}")
+        await message.reply_text(f"❌ Error applying thumbnail: {e}")
+
+    finally:
+        if os.path.exists(thumb_path):
+            os.remove(thumb_path)
+            logger.info(f"🗑 Deleted temp thumbnail {thumb_path}")
