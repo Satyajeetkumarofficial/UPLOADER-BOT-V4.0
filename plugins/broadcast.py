@@ -1,8 +1,5 @@
 # ©️ Tg @yeah_new | YEAR-NEW | @NT_BOT_CHANNEL
 
-
-
-
 import traceback, datetime, asyncio, string, random, time, os, aiofiles, aiofiles.os
 from pyrogram import filters
 from pyrogram import Client
