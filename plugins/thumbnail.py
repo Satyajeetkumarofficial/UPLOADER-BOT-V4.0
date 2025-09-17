@@ -37,7 +37,7 @@ from plugins.database.database import db
 from plugins.settings.settings import *
 
 
-@Client.on_message(filters.photo)
+@Client.on_message(filters.command("savethumb"))
 async def save_photo(bot, update):
     await AddUser(bot, update)
     if Config.UPDATES_CHANNEL:
