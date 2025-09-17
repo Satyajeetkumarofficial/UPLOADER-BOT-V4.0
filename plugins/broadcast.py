@@ -1,4 +1,4 @@
-# ©️ Tg @yeah_new | YEAR-NEW | @NT_BOT_CHANNEL
+# ©️ Tg @yeah_new | YEAR-NEW | @UrlProUploaderBot
 
 import traceback, datetime, asyncio, string, random, time, os, aiofiles, aiofiles.os
 from pyrogram import filters
@@ -7,22 +7,29 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import FloodWait, InputUserDeactivated, UserIsBlocked, PeerIdInvalid
 from plugins.database.database import db
 from plugins.config import Config
+
 broadcast_ids = {}
 
 async def send_msg(user_id, message):
     try:
         await message.copy(chat_id=user_id)
+        print(f"[BROADCAST] ✅ Sent to {user_id}")
         return 200, None
     except FloodWait as e:
+        print(f"[BROADCAST] ⏳ FloodWait {e.x}s for {user_id}")
         await asyncio.sleep(e.x)
-        return send_msg(user_id, message)
+        return await send_msg(user_id, message)   # ✅ recursion fixed with await
     except InputUserDeactivated:
+        print(f"[BROADCAST] ❌ {user_id} deactivated")
         return 400, f"{user_id} : deactivated\n"
     except UserIsBlocked:
+        print(f"[BROADCAST] ❌ {user_id} blocked the bot")
         return 400, f"{user_id} : blocked the bot\n"
     except PeerIdInvalid:
+        print(f"[BROADCAST] ❌ {user_id} invalid user id")
         return 400, f"{user_id} : user id invalid\n"
     except Exception as e:
+        print(f"[BROADCAST] ⚠️ Error for {user_id}: {e}")
         return 500, f"{user_id} : {traceback.format_exc()}\n"
         
 
@@ -39,9 +46,9 @@ async def broadcast_(c, m):
         if not broadcast_ids.get(broadcast_id):
             break
     
-    out = await m.reply_text(
-        text = f"You will be notified with log file when all the users are notified."
-    )
+    out = await m.reply_text("Broadcast started... check logs for progress 📢")
+    print(f"[BROADCAST] 🚀 Broadcast started by {m.from_user.id}")
+    
     start_time = time.time()
     total_users = await db.total_users_count()
     done = 0
@@ -74,6 +81,10 @@ async def broadcast_(c, m):
                 await db.delete_user(user['id'])
             
             done += 1
+
+            # ✅ Log progress in Koyeb console
+            print(f"[BROADCAST] Progress: {done}/{total_users} | ✅ {success} | ❌ {failed}")
+
             if broadcast_ids.get(broadcast_id) is None:
                 break
             else:
@@ -89,20 +100,19 @@ async def broadcast_(c, m):
     completed_in = datetime.timedelta(seconds=int(time.time()-start_time))
     
     await asyncio.sleep(5)
-    
     await out.delete()
     
     if failed == 0:
         await m.reply_text(
-            text=f"broadcast completed in `{completed_in}`\n\nTotal users {total_users}.\nTotal done {done}, {success} success and {failed} failed.",
+            text=f"✅ Broadcast completed in `{completed_in}`\n\nTotal users {total_users}.\nTotal done {done}, {success} success and {failed} failed.",
             quote=True
         )
     else:
         await m.reply_document(
             document='broadcast.txt',
-            caption=f"broadcast completed in `{completed_in}`\n\nTotal users {total_users}.\nTotal done {done}, {success} success and {failed} failed.",
+            caption=f"✅ Broadcast completed in `{completed_in}`\n\nTotal users {total_users}.\nTotal done {done}, {success} success and {failed} failed.",
             quote=True
         )
     
     await aiofiles.os.remove('broadcast.txt')
-                
+    print(f"[BROADCAST] 🎉 Completed in {completed_in} | ✅ {success} | ❌ {failed}")
