@@ -43,7 +43,9 @@ async def broadcast_(client: Client, m):
     # --------------------------
     text = m.text
     if len(text.split()) == 1:
-        await m.reply_text("❌ Please provide message to broadcast.\nExample: /broadcast Hello all users! batch:50")
+        await m.reply_text(
+            "❌ Please provide message to broadcast.\nExample: /broadcast Hello all users! batch:50"
+        )
         return
 
     parts = text.split(" batch:")
@@ -55,9 +57,10 @@ async def broadcast_(client: Client, m):
         if batch_size > 500: batch_size = 500
 
     # --------------------------
-    # Fetch users
+    # Fetch users (async cursor fix)
     # --------------------------
-    all_users = await db.get_all_users()  # <-- FIXED
+    all_users_cursor = await db.get_all_users()  # async cursor
+    all_users = [u async for u in all_users_cursor]  # convert to list
     total_users = len(all_users)
     print(f"[BROADCAST] 🚀 Broadcast started by {m.from_user.id} to {total_users} users | Batch size: {batch_size}")
 
