@@ -192,7 +192,7 @@ async def autotest_command(client: Client, message: Message):
 
         movie = random.choice(movies)  # ✅ random movie pick
         await send_movie_post(client, movie, "📢 Test AutoPost")
-        await message.reply_text(f"✅ Random test movie posted: <code>{movie.get('title')} {movie.get('year')}</code>")
+        await message.reply_text(f"✅ Random test movie posted: <code>{movie.get('title')}</code>")")
 
         logger.info(f"✅ /autotest posted random: {movie.get('title')}")
     except Exception as e:
