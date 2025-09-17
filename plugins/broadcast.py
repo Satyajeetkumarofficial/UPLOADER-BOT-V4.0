@@ -57,7 +57,7 @@ async def broadcast_(client: Client, m):
     # --------------------------
     # Fetch users
     # --------------------------
-    all_users = [u async for u in db.get_all_users()]
+    all_users = await db.get_all_users()  # <-- FIXED
     total_users = len(all_users)
     print(f"[BROADCAST] 🚀 Broadcast started by {m.from_user.id} to {total_users} users | Batch size: {batch_size}")
 
