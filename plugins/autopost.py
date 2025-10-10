@@ -198,3 +198,139 @@ async def autotest_command(client: Client, message: Message):
     except Exception as e:
         await message.reply_text(f"❌ Error: {e}")
         logger.error(f"❌ /autotest failed: {e}")
+
+
+# ✅ Manual command: Post all movies releasing today
+@Client.on_message(filters.command("todaycheck"))
+async def todaycheck_command(client: Client, message: Message):
+    if message.from_user.id != OWNER_ID:
+        await message.reply_text("⛔ Only owner can use this command!")
+        return
+
+    today = datetime.utcnow().date()
+    await message.reply_text("🎯 Checking today's releases...")
+
+    try:
+        url = f"{BASE_URL}/movie/upcoming?api_key={TMDB_API_KEY}&language=en-US&page=1&region=IN"
+        resp = requests.get(url, timeout=10).json()
+        movies = resp.get("results", [])
+
+        if not movies:
+            await message.reply_text("❌ No upcoming movies found.")
+            return
+
+        count = 0
+        for movie in movies:
+            release_date = movie.get("release_date")
+            if not release_date:
+                continue
+            try:
+                release = datetime.strptime(release_date, "%Y-%m-%d").date()
+            except:
+                continue
+
+            if release == today:
+                await send_movie_post(client, movie, "🎉 Releasing Today")
+                count += 1
+
+        if count > 0:
+            await message.reply_text(f"✅ {count} movies released today posted successfully.")
+        else:
+            await message.reply_text("😔 No movies releasing today found.")
+
+        logger.info(f"✅ /todaycheck posted {count} movies for today.")
+    except Exception as e:
+        await message.reply_text(f"❌ Error: {e}")
+        logger.error(f"❌ /todaycheck failed: {e}")
+
+
+
+# ✅ Manual command: Post all movies releasing in next 7 days
+@Client.on_message(filters.command("weekcheck"))
+async def weekcheck_command(client: Client, message: Message):
+    if message.from_user.id != OWNER_ID:
+        await message.reply_text("⛔ Only owner can use this command!")
+        return
+
+    today = datetime.utcnow().date()
+    next_week = today + timedelta(days=7)
+    await message.reply_text("🗓 Checking movies releasing in next 7 days...")
+
+    try:
+        url = f"{BASE_URL}/movie/upcoming?api_key={TMDB_API_KEY}&language=en-US&page=1&region=IN"
+        resp = requests.get(url, timeout=10).json()
+        movies = resp.get("results", [])
+
+        if not movies:
+            await message.reply_text("❌ No upcoming movies found.")
+            return
+
+        count = 0
+        for movie in movies:
+            release_date = movie.get("release_date")
+            if not release_date:
+                continue
+            try:
+                release = datetime.strptime(release_date, "%Y-%m-%d").date()
+            except:
+                continue
+
+            if today < release <= next_week:
+                await send_movie_post(client, movie, "⏳ Releasing This Week")
+                count += 1
+
+        if count > 0:
+            await message.reply_text(f"✅ {count} movies releasing this week posted successfully.")
+        else:
+            await message.reply_text("😔 No movies releasing this week found.")
+
+        logger.info(f"✅ /weekcheck posted {count} movies for next 7 days.")
+    except Exception as e:
+        await message.reply_text(f"❌ Error: {e}")
+        logger.error(f"❌ /weekcheck failed: {e}")
+
+
+
+# ✅ Manual command: Post all movies releasing in next 30 days
+@Client.on_message(filters.command("monthcheck"))
+async def monthcheck_command(client: Client, message: Message):
+    if message.from_user.id != OWNER_ID:
+        await message.reply_text("⛔ Only owner can use this command!")
+        return
+
+    today = datetime.utcnow().date()
+    next_month = today + timedelta(days=30)
+    await message.reply_text("📅 Checking movies releasing in next 30 days...")
+
+    try:
+        url = f"{BASE_URL}/movie/upcoming?api_key={TMDB_API_KEY}&language=en-US&page=1&region=IN"
+        resp = requests.get(url, timeout=10).json()
+        movies = resp.get("results", [])
+
+        if not movies:
+            await message.reply_text("❌ No upcoming movies found.")
+            return
+
+        count = 0
+        for movie in movies:
+            release_date = movie.get("release_date")
+            if not release_date:
+                continue
+            try:
+                release = datetime.strptime(release_date, "%Y-%m-%d").date()
+            except:
+                continue
+
+            if today < release <= next_month:
+                await send_movie_post(client, movie, "🗓 Releasing This Month")
+                count += 1
+
+        if count > 0:
+            await message.reply_text(f"✅ {count} movies releasing this month posted successfully.")
+        else:
+            await message.reply_text("😔 No movies releasing this month found.")
+
+        logger.info(f"✅ /monthcheck posted {count} movies for next 30 days.")
+    except Exception as e:
+        await message.reply_text(f"❌ Error: {e}")
+        logger.error(f"❌ /monthcheck failed: {e}")
