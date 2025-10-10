@@ -242,6 +242,7 @@ async def send_movie_dual(app, chat_id, movie, tag):
         else:
             await app.send_message(chat_id, caption, parse_mode=ParseMode.HTML)
 
+        # Return plain movie name for list
         return details.get("title")
     except Exception as e:
         logger.error(f"❌ Failed to post {details.get('title')}: {e}")
@@ -249,7 +250,8 @@ async def send_movie_dual(app, chat_id, movie, tag):
 
 
 
-# ✅ Manual command: Post all movies releasing today
+# ======================= /todaycheck =======================
+
 @Client.on_message(filters.command("todaycheck"))
 async def todaycheck_command(client: Client, message: Message):
     if message.from_user.id != OWNER_ID:
@@ -283,8 +285,8 @@ async def todaycheck_command(client: Client, message: Message):
                     movie_list.append(name)
 
         if movie_list:
-            names = "\n".join([f"• {m}" for m in movie_list])
-            await message.reply_text(f"✅ <b>{len(movie_list)} movies released today:</b>\n\n{names}", parse_mode=ParseMode.HTML)
+            plain_names = "\n".join(movie_list)
+            await message.reply_text(f"📋 Movie List (copyable):\n{plain_names}")
         else:
             await message.reply_text("😔 No movies releasing today found.")
 
@@ -293,7 +295,8 @@ async def todaycheck_command(client: Client, message: Message):
 
 
 
-# ✅ Manual command: Post all movies releasing in next 7 days
+# ======================= /weekcheck =======================
+
 @Client.on_message(filters.command("weekcheck"))
 async def weekcheck_command(client: Client, message: Message):
     if message.from_user.id != OWNER_ID:
@@ -328,8 +331,8 @@ async def weekcheck_command(client: Client, message: Message):
                     movie_list.append(f"{name} ({release})")
 
         if movie_list:
-            names = "\n".join([f"• {m}" for m in movie_list])
-            await message.reply_text(f"✅ <b>{len(movie_list)} movies releasing this week:</b>\n\n{names}", parse_mode=ParseMode.HTML)
+            plain_names = "\n".join(movie_list)
+            await message.reply_text(f"📋 Movie List (copyable):\n{plain_names}")
         else:
             await message.reply_text("😔 No movies releasing this week found.")
 
@@ -338,7 +341,8 @@ async def weekcheck_command(client: Client, message: Message):
 
 
 
-# ✅ Manual command: Post all movies releasing in next 30 days
+# ======================= /monthcheck =======================
+
 @Client.on_message(filters.command("monthcheck"))
 async def monthcheck_command(client: Client, message: Message):
     if message.from_user.id != OWNER_ID:
@@ -373,8 +377,8 @@ async def monthcheck_command(client: Client, message: Message):
                     movie_list.append(f"{name} ({release})")
 
         if movie_list:
-            names = "\n".join([f"• {m}" for m in movie_list])
-            await message.reply_text(f"✅ <b>{len(movie_list)} movies releasing this month:</b>\n\n{names}", parse_mode=ParseMode.HTML)
+            plain_names = "\n".join(movie_list)
+            await message.reply_text(f"📋 Movie List (copyable):\n{plain_names}")
         else:
             await message.reply_text("😔 No movies releasing this month found.")
 
