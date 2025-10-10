@@ -245,7 +245,7 @@ async def send_movie_dual(app, chat_id, movie, tag):
         # Return formatted name + year + release date
         release_date_str = details.get("release_date", "N/A")
         release_year = release_date_str.split("-")[0] if release_date_str != "N/A" else "N/A"
-        return f"<code>{details.get('title')} ({release_year})</code>  **{release_date_str}**"
+        return f"<b>•</b><code>{details.get('title')} ({release_year})</code>  <b>{release_date_str}</b>"
     except Exception as e:
         logger.error(f"❌ Failed to post {details.get('title')}: {e}")
         return None
