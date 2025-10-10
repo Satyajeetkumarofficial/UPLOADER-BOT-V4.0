@@ -200,7 +200,7 @@ async def autotest_command(client: Client, message: Message):
         logger.error(f"❌ /autotest failed: {e}")
 
 
-# ✅ Helper: send movie to both channel & bot chat
+# ================= Helper: send movie to both channel & bot chat =================
 async def send_movie_dual(app, chat_id, movie, tag):
     movie_id = movie["id"]
 
@@ -236,23 +236,23 @@ async def send_movie_dual(app, chat_id, movie, tag):
         else:
             await app.send_message(FILE_CHANNEL, caption, parse_mode=ParseMode.HTML)
 
-        # Send to bot chat also
+        # Send to bot chat
         if poster_url:
             await app.send_photo(chat_id, poster_url, caption=caption, parse_mode=ParseMode.HTML)
         else:
             await app.send_message(chat_id, caption, parse_mode=ParseMode.HTML)
 
-        # Return plain movie name for list
-        return details.get("title")
+        # Return formatted name + year + release date
+        release_date_str = details.get("release_date", "N/A")
+        release_year = release_date_str.split("-")[0] if release_date_str != "N/A" else "N/A"
+        return f"<code>{details.get('title')} ({release_year})</code>  **{release_date_str}**"
     except Exception as e:
         logger.error(f"❌ Failed to post {details.get('title')}: {e}")
         return None
 
 
-
 # ======================= /todaycheck =======================
-
-@Client.on_message(filters.command("todaycheck"))
+@Client.on_message(filters.command("tcheck"))
 async def todaycheck_command(client: Client, message: Message):
     if message.from_user.id != OWNER_ID:
         await message.reply_text("⛔ Only owner can use this command!")
@@ -280,13 +280,13 @@ async def todaycheck_command(client: Client, message: Message):
                 continue
 
             if release == today:
-                name = await send_movie_dual(client, message.chat.id, movie, "🎉 Releasing Today")
-                if name:
-                    movie_list.append(name)
+                formatted_name = await send_movie_dual(client, message.chat.id, movie, "🎉 Releasing Today")
+                if formatted_name:
+                    movie_list.append(formatted_name)
 
         if movie_list:
-            plain_names = "\n".join(movie_list)
-            await message.reply_text(f"📋 Movie List (copyable):\n{plain_names}")
+            names = "\n".join(movie_list)
+            await message.reply_text(f"📋 Movie List:\n{names}", parse_mode=ParseMode.HTML)
         else:
             await message.reply_text("😔 No movies releasing today found.")
 
@@ -294,10 +294,8 @@ async def todaycheck_command(client: Client, message: Message):
         await message.reply_text(f"❌ Error: {e}")
 
 
-
 # ======================= /weekcheck =======================
-
-@Client.on_message(filters.command("weekcheck"))
+@Client.on_message(filters.command("wcheck"))
 async def weekcheck_command(client: Client, message: Message):
     if message.from_user.id != OWNER_ID:
         await message.reply_text("⛔ Only owner can use this command!")
@@ -326,13 +324,13 @@ async def weekcheck_command(client: Client, message: Message):
                 continue
 
             if today < release <= next_week:
-                name = await send_movie_dual(client, message.chat.id, movie, "⏳ Releasing This Week")
-                if name:
-                    movie_list.append(f"{name} ({release})")
+                formatted_name = await send_movie_dual(client, message.chat.id, movie, "⏳ Releasing This Week")
+                if formatted_name:
+                    movie_list.append(formatted_name)
 
         if movie_list:
-            plain_names = "\n".join(movie_list)
-            await message.reply_text(f"📋 Movie List (copyable):\n{plain_names}")
+            names = "\n".join(movie_list)
+            await message.reply_text(f"📋 Movie List:\n{names}", parse_mode=ParseMode.HTML)
         else:
             await message.reply_text("😔 No movies releasing this week found.")
 
@@ -340,10 +338,8 @@ async def weekcheck_command(client: Client, message: Message):
         await message.reply_text(f"❌ Error: {e}")
 
 
-
 # ======================= /monthcheck =======================
-
-@Client.on_message(filters.command("monthcheck"))
+@Client.on_message(filters.command("mcheck"))
 async def monthcheck_command(client: Client, message: Message):
     if message.from_user.id != OWNER_ID:
         await message.reply_text("⛔ Only owner can use this command!")
@@ -372,13 +368,13 @@ async def monthcheck_command(client: Client, message: Message):
                 continue
 
             if today < release <= next_month:
-                name = await send_movie_dual(client, message.chat.id, movie, "🗓 Releasing This Month")
-                if name:
-                    movie_list.append(f"{name} ({release})")
+                formatted_name = await send_movie_dual(client, message.chat.id, movie, "🗓 Releasing This Month")
+                if formatted_name:
+                    movie_list.append(formatted_name)
 
         if movie_list:
-            plain_names = "\n".join(movie_list)
-            await message.reply_text(f"📋 Movie List (copyable):\n{plain_names}")
+            names = "\n".join(movie_list)
+            await message.reply_text(f"📋 Movie List:\n{names}", parse_mode=ParseMode.HTML)
         else:
             await message.reply_text("😔 No movies releasing this month found.")
 
