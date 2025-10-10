@@ -200,6 +200,55 @@ async def autotest_command(client: Client, message: Message):
         logger.error(f"❌ /autotest failed: {e}")
 
 
+# ✅ Helper: send movie to both channel & bot chat
+async def send_movie_dual(app, chat_id, movie, tag):
+    movie_id = movie["id"]
+
+    # Movie details
+    details_url = f"{BASE_URL}/movie/{movie_id}?api_key={TMDB_API_KEY}&language=en-US"
+    details = requests.get(details_url, timeout=10).json()
+
+    # Credits
+    credits_url = f"{BASE_URL}/movie/{movie_id}/credits?api_key={TMDB_API_KEY}&language=en-US"
+    credits = requests.get(credits_url, timeout=10).json()
+    cast = credits.get("cast", [])
+    crew = credits.get("crew", [])
+
+    top_actors = ", ".join([a["name"] for a in cast[:10]]) or "N/A"
+    directors = [m["name"] for m in crew if m.get("job") == "Director"]
+    director_names = ", ".join(directors) if directors else "N/A"
+
+    # Languages
+    spoken_langs = details.get("spoken_languages", [])
+    langs = [LANG_MAP.get(l["iso_639_1"], l["english_name"]) for l in spoken_langs]
+    languages = ", ".join(langs) if langs else "N/A"
+
+    # Poster
+    poster_url = get_poster_url(movie_id)
+
+    # Caption
+    caption = format_caption(details, director_names, top_actors, languages, tag)
+
+    try:
+        # Send to channel
+        if poster_url:
+            await app.send_photo(FILE_CHANNEL, poster_url, caption=caption, parse_mode=ParseMode.HTML)
+        else:
+            await app.send_message(FILE_CHANNEL, caption, parse_mode=ParseMode.HTML)
+
+        # Send to bot chat also
+        if poster_url:
+            await app.send_photo(chat_id, poster_url, caption=caption, parse_mode=ParseMode.HTML)
+        else:
+            await app.send_message(chat_id, caption, parse_mode=ParseMode.HTML)
+
+        return details.get("title")
+    except Exception as e:
+        logger.error(f"❌ Failed to post {details.get('title')}: {e}")
+        return None
+
+
+
 # ✅ Manual command: Post all movies releasing today
 @Client.on_message(filters.command("todaycheck"))
 async def todaycheck_command(client: Client, message: Message):
@@ -214,12 +263,11 @@ async def todaycheck_command(client: Client, message: Message):
         url = f"{BASE_URL}/movie/upcoming?api_key={TMDB_API_KEY}&language=en-US&page=1&region=IN"
         resp = requests.get(url, timeout=10).json()
         movies = resp.get("results", [])
-
         if not movies:
             await message.reply_text("❌ No upcoming movies found.")
             return
 
-        count = 0
+        movie_list = []
         for movie in movies:
             release_date = movie.get("release_date")
             if not release_date:
@@ -230,18 +278,18 @@ async def todaycheck_command(client: Client, message: Message):
                 continue
 
             if release == today:
-                await send_movie_post(client, movie, "🎉 Releasing Today")
-                count += 1
+                name = await send_movie_dual(client, message.chat.id, movie, "🎉 Releasing Today")
+                if name:
+                    movie_list.append(name)
 
-        if count > 0:
-            await message.reply_text(f"✅ {count} movies released today posted successfully.")
+        if movie_list:
+            names = "\n".join([f"• {m}" for m in movie_list])
+            await message.reply_text(f"✅ <b>{len(movie_list)} movies released today:</b>\n\n{names}", parse_mode=ParseMode.HTML)
         else:
             await message.reply_text("😔 No movies releasing today found.")
 
-        logger.info(f"✅ /todaycheck posted {count} movies for today.")
     except Exception as e:
         await message.reply_text(f"❌ Error: {e}")
-        logger.error(f"❌ /todaycheck failed: {e}")
 
 
 
@@ -260,12 +308,11 @@ async def weekcheck_command(client: Client, message: Message):
         url = f"{BASE_URL}/movie/upcoming?api_key={TMDB_API_KEY}&language=en-US&page=1&region=IN"
         resp = requests.get(url, timeout=10).json()
         movies = resp.get("results", [])
-
         if not movies:
             await message.reply_text("❌ No upcoming movies found.")
             return
 
-        count = 0
+        movie_list = []
         for movie in movies:
             release_date = movie.get("release_date")
             if not release_date:
@@ -276,18 +323,18 @@ async def weekcheck_command(client: Client, message: Message):
                 continue
 
             if today < release <= next_week:
-                await send_movie_post(client, movie, "⏳ Releasing This Week")
-                count += 1
+                name = await send_movie_dual(client, message.chat.id, movie, "⏳ Releasing This Week")
+                if name:
+                    movie_list.append(f"{name} ({release})")
 
-        if count > 0:
-            await message.reply_text(f"✅ {count} movies releasing this week posted successfully.")
+        if movie_list:
+            names = "\n".join([f"• {m}" for m in movie_list])
+            await message.reply_text(f"✅ <b>{len(movie_list)} movies releasing this week:</b>\n\n{names}", parse_mode=ParseMode.HTML)
         else:
             await message.reply_text("😔 No movies releasing this week found.")
 
-        logger.info(f"✅ /weekcheck posted {count} movies for next 7 days.")
     except Exception as e:
         await message.reply_text(f"❌ Error: {e}")
-        logger.error(f"❌ /weekcheck failed: {e}")
 
 
 
@@ -306,12 +353,11 @@ async def monthcheck_command(client: Client, message: Message):
         url = f"{BASE_URL}/movie/upcoming?api_key={TMDB_API_KEY}&language=en-US&page=1&region=IN"
         resp = requests.get(url, timeout=10).json()
         movies = resp.get("results", [])
-
         if not movies:
             await message.reply_text("❌ No upcoming movies found.")
             return
 
-        count = 0
+        movie_list = []
         for movie in movies:
             release_date = movie.get("release_date")
             if not release_date:
@@ -322,15 +368,15 @@ async def monthcheck_command(client: Client, message: Message):
                 continue
 
             if today < release <= next_month:
-                await send_movie_post(client, movie, "🗓 Releasing This Month")
-                count += 1
+                name = await send_movie_dual(client, message.chat.id, movie, "🗓 Releasing This Month")
+                if name:
+                    movie_list.append(f"{name} ({release})")
 
-        if count > 0:
-            await message.reply_text(f"✅ {count} movies releasing this month posted successfully.")
+        if movie_list:
+            names = "\n".join([f"• {m}" for m in movie_list])
+            await message.reply_text(f"✅ <b>{len(movie_list)} movies releasing this month:</b>\n\n{names}", parse_mode=ParseMode.HTML)
         else:
             await message.reply_text("😔 No movies releasing this month found.")
 
-        logger.info(f"✅ /monthcheck posted {count} movies for next 30 days.")
     except Exception as e:
         await message.reply_text(f"❌ Error: {e}")
-        logger.error(f"❌ /monthcheck failed: {e}")
