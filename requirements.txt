@@ -25,3 +25,4 @@ pytube
 flask
 gunicorn==20.1.0
 apscheduler
+werkzeug>=3.1.4
