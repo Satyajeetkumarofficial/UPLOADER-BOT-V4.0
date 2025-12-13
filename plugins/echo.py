@@ -190,7 +190,7 @@ async def echo(bot, update):
     if t_response:
         x_reponse = t_response
         if "\n" in x_reponse:
-            x_reponse, _ = x_reponse.split("\n")
+            x_reponse = x_reponse.split("\n", 1)[0]
         response_json = json.loads(x_reponse)
         randem = random_char(5)
         save_ytdl_json_path = Config.DOWNLOAD_LOCATION + \
